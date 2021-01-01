@@ -53,14 +53,14 @@ skills = require('skills')
 
 
 default = {}
-default.update_frequency = 0.2
+default.update_frequency = 0.1
 default.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
-default.min_ws_window = 2.8
-default.max_ws_window = 9.3
+default.min_ws_window = 3
+default.max_ws_window = 8
 default.min_tp = 1000
 default.close_levels = {[1]=true, [2] = true,[3] = true}
 default.target_level = 2
-default.attempt_delay = 0.5
+default.attempt_delay = 0.3
 
 settings = config.load(default)
 
