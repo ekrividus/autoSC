@@ -470,14 +470,10 @@ function action_handler(act)
 		debug_message("2? "..target.id.." Used: "..skills[resource][action_id].en.." Eff: "..T(skills[resource][action_id].skillchain):concat(", "))
 		local s = T{english="Base",lvl=0,elements=T{},chains=T(skills[resource][action_id].skillchain)}
 		skillchain_opened(s)
---        apply_properties(target.id, resource, action_id, aeonic_prop(ability, actor), ability.delay or 3, 1)
     elseif message_id == 529 then
 		debug_message("3? Message 529")
---        apply_properties(target.id, resource, action_id, chainbound[param], 2, 1, false, param)
     elseif message_id == 100 and buff_dur[param] then
 		debug_message("4? Message 100")
---        buffs[actor] = buffs[actor] or {}
---        buffs[actor][param] = buff_dur[param] + os.time()
     end
 end
 
@@ -497,15 +493,9 @@ windower.register_event('addon command', function(...)
 		cmd = arg[1]
 	end
 
-	if (cmd == 'test') then
-		local test_skillchain = {}
-		local test_spell = nil
-
-		test_skillchain.english = 'Test Chain'
-		test_skillchain.elements = {'Earth','Light','Fire', 'Ice'}
-		test_spell = get_spell(test_skillchain, nil, false, true)
-		message('Test Spell: '..test_spell ~= nil and test_spell or 'Not Found')
-		return
+	if (cmd == nil or #arg < 1) then
+		active = not active
+		message((active and "Starting" or "Stopping"))
 	elseif (cmd == 'help') then
 		show_help()
 		return
@@ -513,58 +503,49 @@ windower.register_event('addon command', function(...)
 		show_status()
 		return
 	elseif (cmd == 'on') then
-		windower.add_to_chat(17, 'autoSC activating')
+		message("Starting")
 		player = windower.ffxi.get_player()
 		active = true
 		last_check_time = os.clock()
         return
     elseif (cmd == 'off') then
-        windower.add_to_chat(17, 'autoSC deactivating')
+		message("Stopping")
         active = false
 		return
-	elseif (cmd == 'cast' or cmd == 'c') then
+	elseif (cmd == 'tp') then
 		if (#arg < 2) then
-			windower.add_to_chat(17, "Usage: autoSC cast spell|helix|jutsu\nTells autoSC what magic type to try to cast if the default is not what you want.")
+			windower.add_to_chat(17, "Usage: autoSC TP #### where #### is a number between 1000~3000")
 		end
-		if (T(cast_types):contains(arg[2]:lower())) then
-			settings.cast_type = arg[2]:lower()
+		if (tonumber(arg[2])) then
+			settings.min_tp = arg[2]
 		end
 		settings:save()
 		return
-	elseif (cmd == 'tier' or cmd == 't') then
-		if (#arg < 2) then
-			windower.add_to_chat(17, "Usage: tier 1~6\nTells autoSC what tier spell to use for Ninjutsu 1~3 will become ichi|ni|san.")
-			return
-		end
-		local t = tonumber(arg[2])
-		if (settings.cast_type == 'jutsu') then
-			if (settings.cast_tier > 0 and settings.cast_tier < 4) then
-				settings.cast_tier = t
-			end
-		else
-			if (t > 0 and t < 7) then
-				settings.cast_tier = t
-			end		
-		end
-		settings:save()
-		message("Cast Tier set to: "..t.." ["..(settings.cast_type == 'jutsu' and jutsu_tiers[settings.cast_tier].suffix or magic_tiers[settings.cast_tier].suffix).."]")
-		return
-	elseif (cmd == 'mp') then
+	elseif (cmd == 'minwin') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC mp #")
+			windower.add_to_chat(17, "Usage: autoSC minwin #")
 			return
 		end
-		settings.mp = n
+		settings.min_ws_window = n
 		settings:save()
 		return
-	elseif (cmd == 'delay' or cmd == 'd') then
+	elseif (cmd == 'maxwin') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC delay #")
+			windower.add_to_chat(17, "Usage: autoSC maxwin #")
 			return
 		end
-		settings.cast_delay = n
+		settings.max_ws_window = n
+		settings:save()
+		return
+	elseif (cmd == 'retry') then
+		local n = tonumber(arg[2])
+		if (n == nil or n < 0) then
+			windower.add_to_chat(17, "Usage: autoSC retry #")
+			return
+		end
+		settings.attempt_delay = n
 		settings:save()
 		return
 	elseif (cmd == 'frequency' or cmd == 'f') then
@@ -573,114 +554,21 @@ windower.register_event('addon command', function(...)
 			windower.add_to_chat(17, "Usage: autoSC (f)requency #")
 			return
 		end
-		settings.frequency = n
+		settings.update_frequency = n
 		settings:save()
 		return
-	elseif (cmd == 'doubleburst' or cmd == 'double' or cmd == 'dbl') then
-		settings.double_burst = not settings.double_burst
-		settings:save()
-		return
-	elseif (cmd == 'doubleburstdelay' or cmd == 'doubledelay' or cmd == 'dbldelay' or cmd == 'dbld') then
+	elseif (cmd == 'level' or cmd == 'l') then
 		local n = tonumber(arg[2])
-		if (n == nil or n < -10 or n > 10) then
-			windower.add_to_chat(17, "Usage: autoSC doubleburstdelay [-10..10]")
+		if (n == nil or n < 0) then
+			windower.add_to_chat(17, "Usage: autoSC (l)evel #")
 			return
 		end
-		settings.double_burst_delay = n
-		settings:save()
-		return
-	elseif (cmd == 'weather') then
-		settings.check_weather = not settings.check_weather
-		message('Will'..(settings.check_weather and ' ' or ' not ')..'use current weather bonuses')
-	elseif (cmd == 'day') then
-		settings.check_day = not settings.check_day
-		message('Will'..(settings.check_day and ' ' or ' not ')..'use current day bonuses')
-	elseif (cmd == 'toggle' or cmd == 'tog') then
-		local what = 'all'
-		local toggle = 'toggle'
-
-		if (#arg > 1) then
-			what = arg[2]:lower()
-		end
-
-		if (#arg > 2) then
-			toggle = arg[3]:lower()
-		end
-
-		-- Show/Hide skillchain name/elements and spell(s) to be cast
-		if (what == 'skillchain' or what == 'sc' or what == 'all') then
-			if (toggle == '' or toggle == 'toggle') then
-				settings.show_skillchain = not settings.show_skillchain
-			else
-				settings.show_skillchain = (toggle == 'on')
-			end
-			windower.add_to_chat(17, 'autoSC: Skillchain info will be '..(settings.show_skillchain == true and 'shown' or 'hidden'))
-        end
-		
-		if (what == 'elements' or what == 'element' or what == 'all') then
-			if (toggle == 'toggle') then
-				settings.show_elements = not settings.show_elements
-			else
-				settings.show_elements = (toggle == 'on')
-			end
-			windower.add_to_chat(17, 'autoSC: Skillchain element info will be '..(settings.show_elements == true and 'shown' or 'hidden'))
-        end
-
-		if (what == 'weather' or what == 'bonus' or what == 'all') then
-			if (toggle == 'toggle') then
-				settings.show_bonus_elements = not settings.show_bonus_elements
-			else
-				settings.show_bonus_elements = (toggle == 'on')
-			end
-			windower.add_to_chat(17, 'autoSC: Day/Weather element info will be '..(settings.show_bonus_elements == true and 'shown' or 'hidden'))
-        end
-
-		if (what == 'spell' or what == 'sp' or what == 'all') then
-			if (toggle == 'toggle') then
-				settings.show_spell = not settings.show_spell
-			else
-				settings.show_spell = (toggle == 'on')
-			end
-			windower.add_to_chat(17, 'autoSC: Spell info will be '..(settings.show_spell == true and 'shown' or 'hidden'))
-		end
-
-		settings:save()
-		return
-	elseif (cmd == 'stepdown' or cmd == 'sd') then
-		local txt = ''
-		if (settings.step_down == 0) then
-			settings.step_down = 1
-			txt = 'on target change'
-		elseif (settings.step_down == 1) then
-			settings.step_down = 2
-			txt = 'always'
-		else
-			settings.step_down = 0
-			txt = 'never'
-		end
-		settings:save()
-		message("Double burst Step Down set to "..txt)
-		return
-	elseif (cmd == 'gearswap' or cmd == 'gs') then
-		if (settings.gearswap) then
-			settings.gearswap = false
-		else
-			settings.gearswap = true
-		end
-		message("Will "..(settings.gearswap and '' or ' not ').."use 'gs c bursting' and 'gs c notbursting'")
+		settings.target_level = n
 		settings:save()
 		return
 	elseif (cmd == 'debug') then
 		debug = not debug
 		message("Will"..(debug and ' ' or ' not ').."show debug information")
-		return
-	elseif (cmd == 'target' or 'tgt') then
-		if (settings.change_target == nil) then
-			settings.change_target = false
-		end
-		settings.change_target = not settings.change_target
-		message("Auto target swapping "..(settings.change_target and 'enabled' or 'disabled')..".")
-		settings:save()
 		return
     end
 end) -- Addon Command
