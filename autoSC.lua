@@ -177,7 +177,7 @@ local ws_window = 0
 local last_attempt = 0
 
 function message(text, to_log) 
-	if (text == nil or #text < 1) then
+	if (text == nil) then
 		return
 	end
 
@@ -189,7 +189,7 @@ function message(text, to_log)
 end
 
 function debug_message(text, to_log) 
-	if (debug == false or text == nil or #text < 1) then
+	if (debug == false or text == nil) then
 		return
 	end
 
@@ -201,21 +201,25 @@ function debug_message(text, to_log)
 end
 
 function show_help()
-	message('Usage:\nautoSC on|off - turn auto magic bursting on or off\nautoSC show on|off - display messages about skillchains|magic bursts')
+	message(
+		[[Usage:\n
+		autoSC on|off - turn auto skillchaining on or off\n'
+		]])
 	show_status()
 end
 
 function show_status()
 	message('Auto Skillchains: \t\t'..(active and 'On' or 'Off'))
-	message('Close tier: \t'..settings.cast_type..' Tier: \t'..(settings.cast_tier))
-	message('Min MP: \t\t'..settings.mp)
-	message('Cast Delay: '..settings.cast_delay..' seconds')
-	message('Double Burst: '..(settings.double_burst and ('On'..' delay '..settings.double_burst_delay..' seconds') or 'Off'))
-	message('Check Elements - Day: '..(settings.check_day and 'On' or 'Off')..' Weather: '..(settings.check_weather and 'On' or 'Off'))
-	message('Show Skillchain: \t\t'..(settings.show_skillchain and 'On' or 'Off'))
-	message('Show Skillchain Elements: \t'..(settings.show_elements and 'On' or 'Off'))
-	message('Show Day|Weather Elements: \t'..(settings.show_bonus_elements and 'On' or 'Off'))
-	message('Show Spell: \t'..(settings.show_spell and 'On' or 'Off'))
+	for k, v in pairs(settings) do
+		if (type(v) == 'table') then
+			message(k)
+			for _, x in pairs(v) do
+				message("\t"..x)
+			end
+		else
+			message(k.." - "..v)
+		end
+	end
 end
 
 function buff_active(id)
@@ -287,12 +291,10 @@ function get_weaponskill()
 	if (last_skillchain.chains and #last_skillchain.chains >= 1) then
 		for _, v in pairs (last_skillchain.chains) do
 			for _, id in pairs (weapon_skills) do
-				if (id and id > 0 and skills.weapon_skills[id]) then
-					for _, closers in pairs (sc_info[v].closers) do
-						for _, closer in pairs (closers) do
-							if (T(skills.weapon_skills[id].skillchain):contains(closer)) then
-								ws_options:append({name=skills.weapon_skills[id].en,lvl=closers[1]})
-							end
+				if (id and skills.weapon_skills[id]) then
+					for sc_closer, sc_result in pairs (sc_info[v].closers) do
+						if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
+							ws_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
 						end
 					end
 				end
@@ -301,18 +303,23 @@ function get_weaponskill()
 	else
 		for _, id in pairs (weapon_skills) do
 			if (id and id > 0 and skills.weapon_skills[id]) then
-				for _, closers in pairs (sc_info[last_skillchain.english].closers) do
-					for _, closer in pairs (closers) do
-						if (T(skills.weapon_skills[id].skillchain):contains(closer)) then
-							ws_options:append({name=skills.weapon_skills[id].en,lvl=closers[closer][1]})
-						end
+				for sc_closer, sc_result in pairs (sc_info[last_skillchain.english].closers) do
+					if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
+						ws_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
 					end
 				end
 			end
 		end
 	end
 
-	debug_message("WSes found: "..#ws_options)
+	if (debug) then
+		local l = ""
+		for k, v in pairs(ws_options) do
+			l = l..","..v.name
+		end 
+		debug_message("WSes found: "..#ws_options.." "..l)
+	end
+
 	if (#ws_options == 0) then
 		return nil
 	elseif (#ws_options == 1) then
