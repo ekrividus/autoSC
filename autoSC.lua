@@ -214,7 +214,11 @@ function show_status()
 		if (type(v) == 'table') then
 			message(k)
 			for _, x in pairs(v) do
-				message("\t"..x)
+				if (type(x) == 'table') then
+					message(T(x):tovstring())
+				else
+					message("\t"..tostring(x))
+				end
 			end
 		else
 			message(k.." - "..v)
@@ -521,8 +525,11 @@ windower.register_event('addon command', function(...)
 		if (#arg < 2) then
 			windower.add_to_chat(17, "Usage: autoSC TP #### where #### is a number between 1000~3000")
 		end
-		if (tonumber(arg[2])) then
-			settings.min_tp = arg[2]
+		local n = tonumber(arg[2])
+		if (n ~= nil and n >= 1000 and n <= 3000) then
+			settings.min_tp = tonumber(arg[2])
+		else
+			message("TP must be a number between 1000 and 3000")
 		end
 		settings:save()
 		return
