@@ -355,7 +355,7 @@ windower.register_event('prerender', function(...)
 	end
 	last_check_time = time
 
-	if (sc_opened and ws_window/10 >= settings.max_ws_window) then
+	if (sc_opened and ws_window >= settings.max_ws_window) then
 		debug_message("Skillchain window expired: "..ws_window)
 		skillchain_closed()
 		return
@@ -369,8 +369,10 @@ windower.register_event('prerender', function(...)
 			debug_message("WS window expired, sc effect wore.")
 			skillchain_closed()
 			return
-		end
-		if (last_attempt + settings.attempt_delay > time) then 
+		elseif (windower.ffxi.get_mob_by_target("t") == nil) then
+			skillchain_closed()
+			return
+		elseif (last_attempt + settings.attempt_delay > time) then 
 			return
 		end
 		last_attempt = time
@@ -458,22 +460,23 @@ function action_handler(act)
         local step = (reson and reson.step or 1) + 1
 
 		sc_effect_duration = 11-step
-		debug_message("1?"..skillchain.." L"..level.." Step: "..step)
+		debug_message("Skillchain effect applied: "..skillchain.." L"..level.." Step: "..step)
 		if (level == 4) then
 			skillchain_closed()
 			return
 		end
-		skillchain_opened(skillchains:with('english', skillchain))
-		return
+		local m = windower.ffxi.get_mob_by_target("t")
+		if (m and m.id == target.id) then
+			skillchain_opened(skillchains:with('english', skillchain))
+		end
 	elseif ability and (message_ids:contains(message_id) or message_id == 2 and buffs[actor] and chain_buff(buffs[actor])) then
 		sc_effect_duration = 11
-		debug_message("2? "..target.id.." Used: "..skills[resource][action_id].en.." Eff: "..T(skills[resource][action_id].skillchain):concat(", "))
-		local s = T{english="Base",lvl=0,elements=T{},chains=T(skills[resource][action_id].skillchain)}
-		skillchain_opened(s)
-    elseif message_id == 529 then
-		debug_message("3? Message 529")
-    elseif message_id == 100 and buff_dur[param] then
-		debug_message("4? Message 100")
+		debug_message("Base SC effect applied to "..target.id.." Used: "..skills[resource][action_id].en.." Eff: "..T(skills[resource][action_id].skillchain):concat(", "))
+		local m = windower.ffxi.get_mob_by_target("t")
+		if (m and m.id == target.id) then
+			local s = T{english="Base",lvl=0,elements=T{},chains=T(skills[resource][action_id].skillchain)}
+			skillchain_opened(s)
+		end
     end
 end
 
@@ -481,7 +484,9 @@ ActionPacket.open_listener(action_handler)
 
 -- Stop checking if logout happens
 windower.register_event('logout', 'zone change', 'job change', function(...)
-	windower.send_command('autoSC off')
+	if (active) then
+		windower.send_command('autoSC off')
+	end
 	player = nil
 	return
 end)
