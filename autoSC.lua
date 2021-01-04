@@ -212,14 +212,14 @@ function show_status()
 	message('Auto Skillchains: \t\t'..(active and 'On' or 'Off'))
 	for k, v in pairs(settings) do
 		if (type(v) == 'table') then
-			message(k)
-			for _, x in pairs(v) do
-				if (type(x) == 'table') then
-					message(T(x):tovstring())
+			local str = tostring(k)..": "
+			for x, y in pairs(v) do
+				if (type(y) == 'table') then
 				else
-					message("\t"..tostring(x))
+					str = str.."["..tostring(x).."? "..tostring(y).."] "
 				end
 			end
+			message(str)
 		else
 			message(k.." - "..v)
 		end
