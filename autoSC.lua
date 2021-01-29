@@ -329,12 +329,21 @@ function get_weaponskill()
 	elseif (#ws_options == 1) then
 		return ws_options[1].name
 	else -- TODO: This needs to return the most appropriate for current settings, for now just return w/e
+		local ws_to_use = nil
 		for _, ws in pairs(ws_options) do
 			if (ws.lvl == settings.target_level) then
 				return ws.name
-			elseif (settings.close_levels[ws.lvl]) then
-				return ws.name
 			end
+		end
+		for _, ws in pairs(ws_options) do
+			if (settings.close_levels[ws.lvl]) then
+				if (ws_to_use == nil or ws.lvl > ws_to_use.lvl) then
+					ws_to_use = ws
+				end
+			end
+		end
+		if (ws_to_use ~= nil) then
+			return ws_to_use.name
 		end
 		return ws_options[1].name
 	end
