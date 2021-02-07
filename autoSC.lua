@@ -58,7 +58,7 @@ default.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true
 default.min_ws_window = 3
 default.max_ws_window = 8
 default.min_tp = 1000
-default.close_levels = {[1]=true, [2] = true,[3] = true}
+default.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
 default.target_level = 2
 default.attempt_delay = 0.3
 
@@ -563,7 +563,7 @@ windower.register_event('addon command', function(...)
 	elseif (cmd == 'retry') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC retry #")
+			windower.add_to_chat(17, "Usage: autoSC retry # Where # is the number of seconds between attempts to use a WS")
 			return
 		end
 		settings.attempt_delay = n
@@ -581,10 +581,19 @@ windower.register_event('addon command', function(...)
 	elseif (cmd == 'level' or cmd == 'l') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC (l)evel #")
+			windower.add_to_chat(17, "Usage: autoSC (l)evel # Where # is a number between 1 and 4")
 			return
 		end
 		settings.target_level = n
+		settings:save()
+		return
+	elseif (cmd == 'close' or cmd == 'c') then
+		local n = tonumber(arg[s])
+		if (n == nil or n < 1 or n > 4) then
+			windower.add_to_chat(17, "Usage: autoSC (c)lose # Where # is the SC level to close 1..4")
+			return
+		end
+		settings.close_levels[n] = not settings.close_levels[n]
 		settings:save()
 		return
 	elseif (cmd == 'debug') then
