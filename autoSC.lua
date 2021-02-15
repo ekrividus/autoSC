@@ -51,52 +51,27 @@ packets = require('packets')
 
 skills = require('skills')
 
+local defaults = T{}
+defaults.update_frequency = 0.1
+defaults.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
+defaults.min_ws_window = 3
+defaults.max_ws_window = 8
+defaults.min_tp = 1000
+defaults.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
+defaults.target_level = 2
+defaults.attempt_delay = 0.3
 
-default = {}
-default.update_frequency = 0.1
-default.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
-default.min_ws_window = 3
-default.max_ws_window = 8
-default.min_tp = 1000
-default.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
-default.target_level = 2
-default.attempt_delay = 0.3
+local settings = T{}
+settings = config.load(defaults)
 
-settings = config.load(default)
+local message_ids = T{110,185,187,317,802}
+local skillchain_ids = T{288,289,290,291,292,293,294,295,296,297,298,299,300,301,385,386,387,388,389,390,391,392,393,394,395,396,397,767,768,769,770}
+local buff_dur = T{[163]=40,[164]=30,[470]=60}
+local info = T{}
+local resonating = T{}
+local buffs = T{}
 
-message_ids = T{110,185,187,317,802}
-skillchain_ids = T{288,289,290,291,292,293,294,295,296,297,298,299,300,301,385,386,387,388,389,390,391,392,393,394,395,396,397,767,768,769,770}
-buff_dur = T{[163]=40,[164]=30,[470]=60}
-info = T{}
-resonating = T{}
-buffs = T{}
-
-colors = {}            -- Color codes by Sammeh
-colors.Light =         '\\cs(255,255,255)'
-colors.Dark =          '\\cs(0,0,204)'
-colors.Ice =           '\\cs(0,255,255)'
-colors.Water =         '\\cs(0,0,255)'
-colors.Earth =         '\\cs(153,76,0)'
-colors.Wind =          '\\cs(102,255,102)'
-colors.Fire =          '\\cs(255,0,0)'
-colors.Lightning =     '\\cs(255,0,255)'
-colors.Gravitation =   '\\cs(102,51,0)'
-colors.Fragmentation = '\\cs(250,156,247)'
-colors.Fusion =        '\\cs(255,102,102)'
-colors.Distortion =    '\\cs(51,153,255)'
-colors.Darkness =      colors.Dark
-colors.Umbra =         colors.Dark
-colors.Compression =   colors.Dark
-colors.Radiance =      colors.Light
-colors.Transfixion =   colors.Light
-colors.Induration =    colors.Ice
-colors.Reverberation = colors.Water
-colors.Scission =      colors.Earth
-colors.Detonation =    colors.Wind
-colors.Liquefaction =  colors.Fire
-colors.Impaction =     colors.Lightning
-
-sc_info = T{
+local sc_info = T{
     Radiance = {elements={'Fire','Wind','Lightning','Light'}, closers={}, lvl=4},
     Umbra = {elements={'Earth','Ice','Water','Dark'}, closers={}, lvl=4},
     Light = {elements={'Fire','Wind','Lightning','Light'}, closers={Light={4,'Light','Radiance'}}, lvl=3},
@@ -115,7 +90,7 @@ sc_info = T{
     Impaction = {elements={'Lightning'}, closers={Liquefaction={1,'Liquefaction'}, Detonation={1,'Detonation'}}, lvl=1},
 }
 
-chainbound = T{}
+local chainbound = T{}
 chainbound[1] = T{'Compression','Liquefaction','Induration','Reverberation','Scission'}
 chainbound[2] = T{'Gravitation','Fragmentation','Distortion'} + chainbound[1]
 chainbound[3] = T{'Light','Darkness'} + chainbound[2]
