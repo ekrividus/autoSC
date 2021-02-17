@@ -16,10 +16,18 @@ With no options will toggle running
 * maxwin <number> - The longest to wait to use a WS when a SC has been detected
 * retry <number> - How fast to try again if a WS wasn't able to be used
 * frequency <number> - Update speed, not much reason to change this
-* level <number> - Sets the target SC closing level from 1, 2 or 3. If a WS is available that will close at the chosen level it will be prioritized.
+* level <number> - Sets the target SC closing level from 1, 2, 3 or 4. If a WS is available that will close at the chosen level it will be prioritized.
+* close <number> - Toggles whether to close a given tier 1, 2, 3 or 4. If a tier is disabled it will may not close anything.
+* open - Toggle whether or not the set WS should be used to open fresh SCs when no SC effect is already present.
+* ws <ws name> - Will set the WS to use for opening a SC when no effect present and the _open_ option is toggled on.
+  * WSs are saved per job and per weapon, so you can use RMEA or quested WSs with appropriate weapons for openers if desired.
 
 #### ToDo:
 * (Dis)Allow closing given levels
+  * Done, appears to be working as intended
 * Add T4 SCs
+  * Can now close T4 and recognizes T4 but doesn't always honor double T3 ...
 * Add non-weaponskill SC effects, Konzen-Ittai for instance
 * Add magic and ability SC closers, Blu spells, pets, etc.
+* Add ability to open SCs if no SC effect is already present and TP > 1000 
+  * Done, appears to be working as intended

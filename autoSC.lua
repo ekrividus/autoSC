@@ -51,19 +51,7 @@ packets = require('packets')
 
 skills = require('skills')
 
-local defaults = T{}
-defaults.update_frequency = 0.1
-defaults.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
-defaults.min_ws_window = 3
-defaults.max_ws_window = 8
-defaults.min_tp = 1000
-defaults.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
-defaults.target_level = 2
-defaults.attempt_delay = 0.3
-
-local settings = T{}
-settings = config.load(defaults)
-
+local bags = {[0]='inventory',[8]='wardrobe',[10]='wardrobe2',[11]='wardrobe3',[12]='wardrobe4'}
 local message_ids = T{110,185,187,317,802}
 local skillchain_ids = T{288,289,290,291,292,293,294,295,296,297,298,299,300,301,385,386,387,388,389,390,391,392,393,394,395,396,397,767,768,769,770}
 local buff_dur = T{[163]=40,[164]=30,[470]=60}
@@ -133,7 +121,7 @@ local skillchains = T{
 
 local active = false
 local debug = false
-local player = nil
+local player = windower.ffxi.get_player()
 
 local finish_act = L{2,3,5}
 local start_act = L{7,8,9,12}
@@ -151,7 +139,37 @@ local sc_effect_duration = 0
 local ws_window = 0
 local last_attempt = 0
 
+local defaults = T{}
+defaults.update_frequency = 0.1
+defaults.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
+defaults.min_ws_window = 2.75
+defaults.max_ws_window = 8
+defaults.min_tp = 1000
+defaults.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
+defaults.target_level = 2
+defaults.attempt_delay = 0.5
+defaults.open_sc = false
+
+local settings = T{}
+settings = config.load(defaults)
+if (settings.open == nil) then
+	settings.open = false
+end
+
+local function tchelper(first, rest)
+    return first:upper()..rest:lower()
+end
+
+function title_case(str)
+    if (str == nil) then
+        return str
+    end
+    str = str:gsub("(%a)([%w_']*)", tchelper)
+    return str
+end
+
 function message(text, to_log) 
+	to_log = to_log or false
 	if (text == nil) then
 		return
 	end
@@ -171,7 +189,7 @@ function debug_message(text, to_log)
 	if (to_log) then
 		log("(debug): "..text)
 	else
-		windower.add_to_chat(17, _addon.name.."(debug): "..text)
+		windower.add_to_chat(17, _addon.name.." (debug): "..text)
 	end
 end
 
@@ -196,7 +214,7 @@ function show_status()
 			end
 			message(str)
 		else
-			message(k.." - "..v)
+			message(k.." - "..tostring(v))
 		end
 	end
 end
@@ -303,7 +321,8 @@ function get_weaponskill()
 		return nil
 	elseif (#ws_options == 1) then
 		return ws_options[1].name
-	else -- TODO: This needs to return the most appropriate for current settings, for now just return w/e
+	else 
+		-- TODO: This needs to return the most appropriate for current settings, for now just return w/e
 		local ws_to_use = nil
 		for _, ws in pairs(ws_options) do
 			if (ws.lvl == settings.target_level) then
@@ -331,25 +350,56 @@ function use_weaponskill(ws_name)
 	end
 end
 
+function open_skillchain()
+	if (active and player.vitals.tp < 1000) then return end
+	local items,weapon,bag = nil
+	items = windower.ffxi.get_items()
+	weapon,bag = items.equipment.main, items.equipment.main_bag
+
+	if (weapon == nil or bag == nil or items == nil) then
+		message("Missing weapon data: "..tostring(weapon).." - "..tostring(items).." - "..tostring(bag))
+		return
+	end
+
+	local weapon_name = 'Empty'
+	if weapon ~= 0 then  --0 => nothing equipped
+		weapon_name = res.items[items[bags[bag]][weapon].id].en
+	end
+
+	if (settings[player.main_job:lower()] ~= nil and settings[player.main_job:lower()][weapon_name:lower()] ~= nil) then
+		use_weaponskill(settings[player.main_job:lower()][weapon_name:lower()])
+	end
+end
+
 --[[ Windower Events ]]--
 windower.register_event('prerender', function(...)
 	local time = os.clock()
 	local delta_time = time - last_frame_time
 	last_frame_time = time
-
 	ws_window = ws_window + delta_time
+
+	if (is_busy > 0) then
+		is_busy = (is_busy - delta_time) < 0 and 0 or (is_busy - delta_time)
+	end
+
 	if (last_check_time + settings.update_frequency > time) then
 		return
 	end
 	last_check_time = time
 
+	if (settings.open_sc and not sc_opened) then
+		if (last_attempt + settings.attempt_delay > time) then 
+			return
+		end
+		open_skillchain()
+		last_attempt = time
+		return
+	end
+
 	if (sc_opened and ws_window >= settings.max_ws_window) then
 		debug_message("Skillchain window expired: "..ws_window)
 		skillchain_closed()
 		return
-	end
-	if (is_busy > 0) then
-		is_busy = (is_busy - delta_time) < 0 and 0 or (is_busy - delta_time)
 	end
 
 	if (sc_opened and weaponskill_ready() and ws_window > settings.min_ws_window and ws_window < settings.max_ws_window) then
@@ -445,11 +495,11 @@ function action_handler(act)
         local level = sc_info[skillchain].lvl
         local reson = resonating[target.id]
         local delay = ability and ability.delay or 3
-        local step = (reson and reson.step or 1) + 1
+        local step = (reson and reson.step or 0)
 
-		sc_effect_duration = 11-step
+		sc_effect_duration = (11-step*3) > 3 and (10-step*3) or 3
 		debug_message("Skillchain effect applied: "..skillchain.." L"..level.." Step: "..step)
-		if (level == 4) then
+		if (level >= 4) then
 			skillchain_closed()
 			return
 		end
@@ -505,71 +555,100 @@ windower.register_event('addon command', function(...)
 		message("Stopping")
         active = false
 		return
+	elseif (cmd == 'open') then
+		settings.open_sc = not settings.open_sc
+		message("Will "..(settings.open_sc and "" or "not ").."open new SCs")
+		settings:save(player.name)
+	elseif (cmd == 'ws') then
+		if (#arg < 2) then
+			message("Usage: autoSC WS weaponskill name")
+			return
+		end
+		local items,weapon,bag = nil
+		items = windower.ffxi.get_items()
+		weapon,bag = items.equipment.main, items.equipment.main_bag
+	
+		if (weapon == nil or bag == nil or items == nil) then
+			message("Missing weapon data: "..tostring(weapon).." - "..tostring(items).." - "..tostring(bag))
+			return
+		end
+
+		local weapon_name = 'Empty'
+	    if weapon ~= 0 then  --0 => nothing equipped
+			weapon_name = res.items[items[bags[bag]][weapon].id].en
+		end
+	
+		settings[player.main_job] =	settings[player.main_job] or {}
+		settings[player.main_job][weapon_name] = T(arg):slice(2, #arg):concat(" ")
+		message("SC Opener for "..tostring(player.main_job).." using "..weapon_name.." set to "..tostring(settings[player.main_job][weapon_name]))
+		settings:save(player.name)
 	elseif (cmd == 'tp') then
 		if (#arg < 2) then
-			windower.add_to_chat(17, "Usage: autoSC TP #### where #### is a number between 1000~3000")
+			message("Usage: autoSC TP #### where #### is a number between 1000~3000")
+			return
 		end
 		local n = tonumber(arg[2])
 		if (n ~= nil and n >= 1000 and n <= 3000) then
 			settings.min_tp = tonumber(arg[2])
 		else
 			message("TP must be a number between 1000 and 3000")
+			return
 		end
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'minwin') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC minwin #")
+			message("Usage: autoSC minwin #")
 			return
 		end
 		settings.min_ws_window = n
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'maxwin') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC maxwin #")
+			message("Usage: autoSC maxwin #")
 			return
 		end
 		settings.max_ws_window = n
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'retry') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC retry # Where # is the number of seconds between attempts to use a WS")
+			message("Usage: autoSC retry # Where # is the number of seconds between attempts to use a WS")
 			return
 		end
 		settings.attempt_delay = n
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'frequency' or cmd == 'f') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC (f)requency #")
+			message("Usage: autoSC (f)requency #")
 			return
 		end
 		settings.update_frequency = n
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'level' or cmd == 'l') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
-			windower.add_to_chat(17, "Usage: autoSC (l)evel # Where # is a number between 1 and 4")
+			message("Usage: autoSC (l)evel # Where # is a number between 1 and 4")
 			return
 		end
 		settings.target_level = n
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'close' or cmd == 'c') then
 		local n = tonumber(arg[s])
 		if (n == nil or n < 1 or n > 4) then
-			windower.add_to_chat(17, "Usage: autoSC (c)lose # Where # is the SC level to close 1..4")
+			message("Usage: autoSC (c)lose # Where # is the SC level to close 1..4")
 			return
 		end
 		settings.close_levels[n] = not settings.close_levels[n]
-		settings:save()
+		settings:save(player.name)
 		return
 	elseif (cmd == 'debug') then
 		debug = not debug
