@@ -351,7 +351,9 @@ function use_weaponskill(ws_name)
 end
 
 function open_skillchain()
-	if (active and player.vitals.tp < 1000) then return end
+	player = windower.ffxi.get_player()
+	if (active and player ~= nil and player.vitals.tp < 1000) then return end
+	
 	local items,weapon,bag = nil
 	items = windower.ffxi.get_items()
 	weapon,bag = items.equipment.main, items.equipment.main_bag
