@@ -151,9 +151,9 @@ defaults.attempt_delay = 0.5
 defaults.open_sc = false
 
 local settings = T{}
-settings = config.load(defaults)
-if (settings.open == nil) then
-	settings.open = false
+settings = config.load("data/"..player.name..".xml", defaults)
+if (settings.open_sc == nil) then
+	settings.open_sc = false
 end
 
 local function tchelper(first, rest)
@@ -346,13 +346,15 @@ end -- get_weaponskill()
 
 function use_weaponskill(ws_name) 
 	if (active) then
+		--if (windower.ffxi.get_mob_by_target('t').vitals.hpp < settings.max_hp) then return end
 		windower.send_command('input /ws "'..ws_name..'" <t>')
 	end
 end
 
 function open_skillchain()
 	player = windower.ffxi.get_player()
-	if (active and player ~= nil and player.vitals.tp < 1000) then return end
+	local mob = windower.ffxi.get_mob_by_target("t")
+	if (mob == nil or not active or player.status ~= 1 or player.vitals.tp < 1000) then return end
 	
 	local items,weapon,bag = nil
 	items = windower.ffxi.get_items()
@@ -369,6 +371,10 @@ function open_skillchain()
 	end
 
 	if (settings[player.main_job:lower()] ~= nil and settings[player.main_job:lower()][weapon_name:lower()] ~= nil) then
+		local ws_range = res.weapon_skills:with('name', settings[player.main_job:lower()][weapon_name:lower()]).range*2
+		ws_range = ws_range + mob.model_size/2 + windower.ffxi.get_mob_by_id(player.id).model_size/2
+		local dist = mob.distance:sqrt()
+		if (dist > ws_range) then return end -- Don't throw away TP on out of range mobs
 		use_weaponskill(settings[player.main_job:lower()][weapon_name:lower()])
 	end
 end
@@ -499,9 +505,9 @@ function action_handler(act)
         local delay = ability and ability.delay or 3
         local step = (reson and reson.step or 0)
 
-		sc_effect_duration = (11-step*3) > 3 and (10-step*3) or 3
+		sc_effect_duration = (11-step*3) > 3 and (11-step*3) or 3
 		debug_message("Skillchain effect applied: "..skillchain.." L"..level.." Step: "..step)
-		if (level >= 4) then
+		if (level >= 4 or (level == 3 and skillchain == last_skillchain.english)) then -- Level 4 and double light/darkness can't be continued
 			skillchain_closed()
 			return
 		end
