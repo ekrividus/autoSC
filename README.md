@@ -1,7 +1,7 @@
 # autoSC
-FFXI Windower addon to help with closing skillchains
+FFXI Windower addon to help with opening and closing skillchains
 
-By defualt it will cycle all available WSs and check to see if one is at the target *level* and if it is will fire it. If none at target level are found will fire the highest tier available that has been allowed for closes.
+By defualt it will cycle all available WSs and check to see if one is at the target *level* and if it is will fire it. If none at target level are found will fire the highest tier available that has been allowed for closes.  
 
 ### Usage:
 autosc or asc [option 1] [option 2]

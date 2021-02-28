@@ -148,13 +148,14 @@ defaults.min_tp = 1000
 defaults.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
 defaults.target_level = 2
 defaults.attempt_delay = 0.5
+-- Newly added settings, may be missing from settings files
 defaults.open_sc = false
+defaults.sc_openers = {}
 
 local settings = T{}
 settings = config.load("data/"..player.name..".xml", defaults)
-if (settings.open_sc == nil) then
-	settings.open_sc = false
-end
+settings.open_sc = settings.open_sc or false
+settings.sc_openers = settings.sc_openers or {}
 
 local function tchelper(first, rest)
     return first:upper()..rest:lower()
@@ -201,20 +202,34 @@ function show_help()
 	show_status()
 end
 
-function show_status()
+function show_status(which)
+	which = which or 'none'
+	which = which:lower()
 	message('Auto Skillchains: \t\t'..(active and 'On' or 'Off'))
-	for k, v in pairs(settings) do
-		if (type(v) == 'table') then
-			local str = tostring(k)..": "
-			for x, y in pairs(v) do
-				if (type(y) == 'table') then
-				else
-					str = str.."["..tostring(x).."? "..tostring(y).."] "
+	if (which == 'display') then
+		message('Display Settings: No display options yet.')
+	elseif (which == 'openers') then
+	else
+		for k, v in pairs(settings) do
+			if (k == 'sc_openers') then
+				local weapon = get_weapon_name():lower()
+				local job = player.main_job:lower()
+				local opener = tostring(settings.sc_openers[job] and (settings.sc_openers[job][weapon] or 'None for '..job) or 'None for '..weapon)
+				message('Opener for '..player.main_job..' using '..title_case(weapon)..': '..opener)
+			elseif (k == 'display') then
+				-- There's no display made (yet?)
+			elseif (type(v) == 'table') then
+				local str = title_case(tostring(k):split('_'):concat(' '))..": "
+				for x, y in pairs(v) do
+					if (type(y) == 'table') then
+					else
+						str = str.."[L"..tostring(x).." "..(y and "Yes" or "No").."] "
+					end
 				end
+				message(str)
+			else
+				message(title_case(k:split('_'):concat(' ')).." - "..tostring(v))
 			end
-			message(str)
-		else
-			message(k.." - "..tostring(v))
 		end
 	end
 end
@@ -351,11 +366,7 @@ function use_weaponskill(ws_name)
 	end
 end
 
-function open_skillchain()
-	player = windower.ffxi.get_player()
-	local mob = windower.ffxi.get_mob_by_target("t")
-	if (mob == nil or not active or player.status ~= 1 or player.vitals.tp < 1000) then return end
-	
+function get_weapon_name()
 	local items,weapon,bag = nil
 	items = windower.ffxi.get_items()
 	weapon,bag = items.equipment.main, items.equipment.main_bag
@@ -370,12 +381,30 @@ function open_skillchain()
 		weapon_name = res.items[items[bags[bag]][weapon].id].en
 	end
 
-	if (settings[player.main_job:lower()] ~= nil and settings[player.main_job:lower()][weapon_name:lower()] ~= nil) then
-		local ws_range = res.weapon_skills:with('name', settings[player.main_job:lower()][weapon_name:lower()]).range*2
-		ws_range = ws_range + mob.model_size/2 + windower.ffxi.get_mob_by_id(player.id).model_size/2
+	if weapon_name:endswith("+1") or weapon_name:endswith("+2") or weapon_name:endswith("+3") then
+		weapon_name = weapon_name:slice(1, -4)
+	end
+	return weapon_name:lower()
+end
+
+function open_skillchain()
+	player = windower.ffxi.get_player()
+	local mob = windower.ffxi.get_mob_by_target("t")
+	if (mob == nil or not active or player.status ~= 1 or player.vitals.tp < 1000) then return end
+	
+	weapon_name = get_weapon_name()
+
+	local job = player.main_job:lower()
+	if (settings.sc_openers[job] ~= nil and settings.sc_openers[job][weapon_name] ~= nil) then
+		local ws_name = settings.sc_openers[job][weapon_name]
+		local ws_range = res.weapon_skills:with('name', ws_name).range*2
 		local dist = mob.distance:sqrt()
+
+		debug_message("Opening SC with "..title_case(ws_name).." Job: "..job:upper().." Weapon: "..title_case(weapon_name))
+		ws_range = ws_range + mob.model_size/2 + windower.ffxi.get_mob_by_id(player.id).model_size/2
 		if (dist > ws_range) then return end -- Don't throw away TP on out of range mobs
-		use_weaponskill(settings[player.main_job:lower()][weapon_name:lower()])
+
+		use_weaponskill(ws_name)
 	end
 end
 
@@ -528,7 +557,16 @@ end
 
 ActionPacket.open_listener(action_handler)
 
--- Stop checking if logout happens
+-- Reload settings on login
+windower.register_event('login', function(...)
+	if (active) then
+		windower.send_command('autoSC off')
+	end
+	player = nil
+	windower.send_command("wait 5; autosc reload")
+	return
+end)
+
 windower.register_event('logout', 'zone change', 'job change', function(...)
 	if (active) then
 		windower.send_command('autoSC off')
@@ -566,30 +604,30 @@ windower.register_event('addon command', function(...)
 	elseif (cmd == 'open') then
 		settings.open_sc = not settings.open_sc
 		message("Will "..(settings.open_sc and "" or "not ").."open new SCs")
-		settings:save(player.name)
+		settings:save('all')
 	elseif (cmd == 'ws') then
 		if (#arg < 2) then
 			message("Usage: autoSC WS weaponskill name")
 			return
 		end
-		local items,weapon,bag = nil
-		items = windower.ffxi.get_items()
-		weapon,bag = items.equipment.main, items.equipment.main_bag
-	
-		if (weapon == nil or bag == nil or items == nil) then
-			message("Missing weapon data: "..tostring(weapon).." - "..tostring(items).." - "..tostring(bag))
+
+		local job = player.main_job:lower()
+		settings.sc_openers[job] = settings.sc_openers[job] or {}
+
+		ws_name = title_case(T(arg):slice(2, #arg):concat(" "))
+		
+		if (ws_name == "Chant Du Cygne") then
+			ws_name = "Chant du Cygne"
+		end
+		if (res.weapon_skills:with('name', ws_name) == nil) then
+			message("No weaponskill with name: "..ws_name.." found. SC Opener not added.")
 			return
 		end
 
-		local weapon_name = 'Empty'
-	    if weapon ~= 0 then  --0 => nothing equipped
-			weapon_name = res.items[items[bags[bag]][weapon].id].en
-		end
-	
-		settings[player.main_job] =	settings[player.main_job] or {}
-		settings[player.main_job][weapon_name] = T(arg):slice(2, #arg):concat(" ")
-		message("SC Opener for "..tostring(player.main_job).." using "..weapon_name.." set to "..tostring(settings[player.main_job][weapon_name]))
-		settings:save(player.name)
+		local weapon_name = get_weapon_name()
+		settings.sc_openers[job][weapon_name] = ws_name
+		message("SC Opener for "..tostring(job:upper()).." using "..title_case(weapon_name).." set to "..tostring(settings.sc_openers[job][weapon_name]))
+		settings:save('all')
 	elseif (cmd == 'tp') then
 		if (#arg < 2) then
 			message("Usage: autoSC TP #### where #### is a number between 1000~3000")
@@ -602,7 +640,7 @@ windower.register_event('addon command', function(...)
 			message("TP must be a number between 1000 and 3000")
 			return
 		end
-		settings:save(player.name)
+		settings:save('all')
 		return
 	elseif (cmd == 'minwin') then
 		local n = tonumber(arg[2])
@@ -611,7 +649,7 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings.min_ws_window = n
-		settings:save(player.name)
+		settings:save('all')
 		return
 	elseif (cmd == 'maxwin') then
 		local n = tonumber(arg[2])
@@ -620,7 +658,7 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings.max_ws_window = n
-		settings:save(player.name)
+		settings:save('all')
 		return
 	elseif (cmd == 'retry') then
 		local n = tonumber(arg[2])
@@ -629,7 +667,7 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings.attempt_delay = n
-		settings:save(player.name)
+		settings:save('all')
 		return
 	elseif (cmd == 'frequency' or cmd == 'f') then
 		local n = tonumber(arg[2])
@@ -638,7 +676,7 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings.update_frequency = n
-		settings:save(player.name)
+		settings:save('all')
 		return
 	elseif (cmd == 'level' or cmd == 'l') then
 		local n = tonumber(arg[2])
@@ -647,7 +685,7 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings.target_level = n
-		settings:save(player.name)
+		settings:save('all')
 		return
 	elseif (cmd == 'close' or cmd == 'c') then
 		local n = tonumber(arg[s])
@@ -656,8 +694,11 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings.close_levels[n] = not settings.close_levels[n]
-		settings:save(player.name)
+		settings:save('all')
 		return
+	elseif (cmd == 'reload') then
+		player = windower.ffxi.get_player()
+		settings = config.load("data/"..player.name..".xml", defaults)
 	elseif (cmd == 'debug') then
 		debug = not debug
 		message("Will"..(debug and ' ' or ' not ').."show debug information")
