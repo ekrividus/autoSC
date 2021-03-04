@@ -19,7 +19,8 @@ With no options will toggle running
 * level <number> - Sets the target SC closing level from 1, 2, 3 or 4. If a WS is available that will close at the chosen level it will be prioritized.
 * close <number> - Toggles whether to close a given tier 1, 2, 3 or 4. If a tier is disabled it will may not close anything.
 * open - Toggle whether or not the set WS should be used to open fresh SCs when no SC effect is already present.
-* ws <ws name> - Will set the WS to use for opening a SC when no effect present and the _open_ option is toggled on.
+* honor/wait - Will *honor* the currently open SC effect *wait*ing for it to wear before opening a new SC.
+* ws <ws name> - Will set the WS to use for opening a SC and the _open_ option is toggled on.
   * WSs are saved per job and per weapon, so you can use RMEA or quested WSs with appropriate weapons for openers if desired.
 
 #### ToDo:

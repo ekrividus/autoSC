@@ -59,6 +59,15 @@ local info = T{}
 local resonating = T{}
 local buffs = T{}
 
+local ranged_weaponskills = T{
+    -- Archery
+    "Flaming Arrow","Piercing Arrow","Dulling Arrow","Sidewinder","Blast Arrow","Arching Arrow",
+    "Empyreal Arrow","Refulgent Arrow","Apex Arrow","Namas Arrow","Jishnu's Radiance",
+    -- Marksmanship 
+    "Hot Shot","Split Shot","Sniper Shot","Slug Shot","Blast Shot","Heavy Shot","Detonator",
+    "Numbing Shot","Last Stand","Coronach","Wildfire","Trueflight","Leaden Salute",
+}
+
 local sc_info = T{
     Radiance = {elements={'Fire','Wind','Lightning','Light'}, closers={}, lvl=4},
     Umbra = {elements={'Earth','Ice','Water','Dark'}, closers={}, lvl=4},
@@ -130,9 +139,9 @@ local is_casting = false
 
 local last_check_time = os.clock()
 local last_frame_time = 0
-local ability_delay = 1.3
-local after_cast_delay = 1.5
-local failed_cast_delay = 2
+local ability_delay = 1.7
+local after_cast_delay = 2
+local failed_cast_delay = 2.4
 
 local sc_opened = false
 local sc_effect_duration = 0
@@ -146,15 +155,19 @@ defaults.min_ws_window = 2.75
 defaults.max_ws_window = 8
 defaults.min_tp = 1000
 defaults.close_levels = {[1]=true,[2]=true,[3]=true,[4]=true}
-defaults.target_level = 2
+defaults.target_sc_level = 2
 defaults.attempt_delay = 0.5
 -- Newly added settings, may be missing from settings files
 defaults.open_sc = false
+defaults.wait_to_open = true
 defaults.sc_openers = {}
+defaults.use_ranged = false
+defaults.prefer_ranged = false
 
 local settings = T{}
 settings = config.load("data/"..player.name..".xml", defaults)
 settings.open_sc = settings.open_sc or false
+settings.wait_to_open = settings.wait_to_open or true
 settings.sc_openers = settings.sc_openers or {}
 
 local function tchelper(first, rest)
@@ -337,10 +350,9 @@ function get_weaponskill()
 	elseif (#ws_options == 1) then
 		return ws_options[1].name
 	else 
-		-- TODO: This needs to return the most appropriate for current settings, for now just return w/e
 		local ws_to_use = nil
 		for _, ws in pairs(ws_options) do
-			if (ws.lvl == settings.target_level) then
+			if (ws.lvl == settings.target_sc_level) then
 				return ws.name
 			end
 		end
@@ -424,15 +436,6 @@ windower.register_event('prerender', function(...)
 	end
 	last_check_time = time
 
-	if (settings.open_sc and not sc_opened) then
-		if (last_attempt + settings.attempt_delay > time) then 
-			return
-		end
-		open_skillchain()
-		last_attempt = time
-		return
-	end
-
 	if (sc_opened and ws_window >= settings.max_ws_window) then
 		debug_message("Skillchain window expired: "..ws_window)
 		skillchain_closed()
@@ -458,9 +461,18 @@ windower.register_event('prerender', function(...)
 			return
 		else -- There isn't a valid WS to close this chain, we can stop checking by closing wht window
 			debug_message("No closer found")
-			skillchain_closed()
 			return
 		end
+	end
+
+	-- If we can't close a SC then try to open one, if there a SC effect or we opt to ignore SC effects
+	if (settings.open_sc and not (sc_opened and settings.wait_to_open)) then
+		if (last_attempt + settings.attempt_delay > time) then 
+			return
+		end
+		open_skillchain()
+		last_attempt = time
+		return
 	end
 end)
 
@@ -605,6 +617,10 @@ windower.register_event('addon command', function(...)
 		settings.open_sc = not settings.open_sc
 		message("Will "..(settings.open_sc and "" or "not ").."open new SCs")
 		settings:save('all')
+	elseif (cmd == 'honor' or cmd == 'wait') then
+		settings.wait_to_open = not settings.wait_to_open
+		message("Will "..(settings.wait_to_open and "" or "not ").." wait for existing SC effect to wear off before opening new SC.")
+		settings:save('all')
 	elseif (cmd == 'ws') then
 		if (#arg < 2) then
 			message("Usage: autoSC WS weaponskill name")
@@ -684,7 +700,7 @@ windower.register_event('addon command', function(...)
 			message("Usage: autoSC (l)evel # Where # is a number between 1 and 4")
 			return
 		end
-		settings.target_level = n
+		settings.target_sc_level = n
 		settings:save('all')
 		return
 	elseif (cmd == 'close' or cmd == 'c') then
