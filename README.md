@@ -27,7 +27,12 @@ With no options will toggle running
   * Done, appears to be working as intended
 * Add T4 SCs
   * Can now close T4 and recognizes T4 but doesn't always honor double T3 ...
-* Add non-weaponskill SC effects, Konzen-Ittai for instance
+  * Double T3 are being recognized as closed, mostly
+* Break off Ranged WSs so they can be enabled/disabled seperately
+* Add melee/ranged WS preferences, based on user choice > actual combat range
+* Maybe add autoRA and gearswap interaction
+* Add Job Ability SC effects, Konzen-Ittai for instance
 * Add magic and ability SC closers, Blu spells, pets, etc.
 * Add ability to open SCs if no SC effect is already present and TP > 1000 
   * Done, appears to be working as intended
+  * Add option to wait for existing SC effect to end, even if unable to close it

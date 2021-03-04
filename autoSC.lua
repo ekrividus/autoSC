@@ -214,8 +214,8 @@ function show_status(which)
 			if (k == 'sc_openers') then
 				local weapon = get_weapon_name():lower()
 				local job = player.main_job:lower()
-				local opener = tostring(settings.sc_openers[job] and (settings.sc_openers[job][weapon] or 'None for '..job) or 'None for '..weapon)
-				message('Opener for '..player.main_job..' using '..title_case(weapon)..': '..opener)
+				local opener = tostring(settings.sc_openers[job] and (settings.sc_openers[job][weapon] or 'None for '..job) or 'None for '..weapon:split("_"):concat(" "))
+				message('Opener for '..player.main_job..' using '..title_case(weapon:split("_"):concat(" "))..': '..opener)
 			elseif (k == 'display') then
 				-- There's no display made (yet?)
 			elseif (type(v) == 'table') then
@@ -384,7 +384,7 @@ function get_weapon_name()
 	if weapon_name:endswith("+1") or weapon_name:endswith("+2") or weapon_name:endswith("+3") then
 		weapon_name = weapon_name:slice(1, -4)
 	end
-	return weapon_name:lower()
+	return weapon_name:lower():split(" "):concat("_")
 end
 
 function open_skillchain()
@@ -626,7 +626,7 @@ windower.register_event('addon command', function(...)
 
 		local weapon_name = get_weapon_name()
 		settings.sc_openers[job][weapon_name] = ws_name
-		message("SC Opener for "..tostring(job:upper()).." using "..title_case(weapon_name).." set to "..tostring(settings.sc_openers[job][weapon_name]))
+		message("SC Opener for "..tostring(job:upper()).." using "..title_case(weapon_name):split("_"):concat(" ").." set to "..tostring(settings.sc_openers[job][weapon_name]))
 		settings:save('all')
 	elseif (cmd == 'tp') then
 		if (#arg < 2) then
