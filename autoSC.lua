@@ -169,6 +169,8 @@ settings = config.load("data/"..player.name..".xml", defaults)
 settings.open_sc = settings.open_sc or false
 settings.wait_to_open = settings.wait_to_open or true
 settings.sc_openers = settings.sc_openers or {}
+settings.use_ranged = settings.use_ranged or false
+settings.prefer_ranged = settings.prefer_ranged or false
 
 local function tchelper(first, rest)
     return first:upper()..rest:lower()
@@ -308,9 +310,10 @@ function weaponskill_ready()
 end
 
 function get_weaponskill()
-	debug_message("Finding WSes")
+	debug_message("Finding WSs")
 	local weapon_skills = T(windower.ffxi.get_abilities().weapon_skills)
-	local ws_options = T{}
+	local ws_melee_options =T{}
+	local ws_ranged_options = T{}
 	if (last_skillchain == nil or (#last_skillchain.elements < 1 and #last_skillchain.chains < 1)) then return "" end
 
 	if (last_skillchain.chains and #last_skillchain.chains >= 1) then
@@ -319,7 +322,11 @@ function get_weaponskill()
 				if (id and skills.weapon_skills[id]) then
 					for sc_closer, sc_result in pairs (sc_info[v].closers) do
 						if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
-							ws_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+							if (ranged_weaponskills:contains(skills.weapon_skills[id].en)) then
+								ws_ranged_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+							else
+								ws_melee_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+							end
 						end
 					end
 				end
@@ -330,7 +337,11 @@ function get_weaponskill()
 			if (id and id > 0 and skills.weapon_skills[id]) then
 				for sc_closer, sc_result in pairs (sc_info[last_skillchain.english].closers) do
 					if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
-						ws_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+						if (ranged_weaponskills:contains(skills.weapon_skills[id].en)) then
+							ws_ranged_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+						else
+							ws_melee_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+						end
 					end
 				end
 			end
@@ -339,34 +350,71 @@ function get_weaponskill()
 
 	if (debug) then
 		local l = ""
-		for k, v in pairs(ws_options) do
-			l = l..","..v.name
+		for k, v in pairs(ws_melee_options) do
+			l = l..(k>1 and ", " or "")..v.name..(ranged_weaponskills:contains(v.name) and "-R" or "-M")
 		end 
-		debug_message("WSes found: "..#ws_options.." "..l)
+		for k, v in pairs(ws_ranged_options) do
+			l = l..(k>1 and ", " or "")..v.name..(ranged_weaponskills:contains(v.name) and "-R" or "-M")
+		end 
+		debug_message("WSes found: "..(#ws_melee_options + #ws_ranged_options).." "..l)
 	end
 
-	if (#ws_options == 0) then
+	if (#ws_melee_options == 0 and #ws_ranged_options == 0) then
 		return nil
-	elseif (#ws_options == 1) then
-		return ws_options[1].name
+	elseif (#ws_melee_options == 1 and (#ws_ranged_options == 0 or settings.use_ranged == false)) then
+		return ws_melee_options[1]
+	elseif (#ws_melee_options == 0 and (#ws_ranged_options == 1 and settings.use_ranged)) then
+		return ws_ranged_options[1]
 	else 
-		local ws_to_use = nil
-		for _, ws in pairs(ws_options) do
+		local ws_melee,ws_ranged = nil
+		local mob = windower.ffxi.get_mob_by_target("t")
+		local dist = mob.distance:sqrt() - mob.model_size/2 -- - windower.ffxi.get_mob_by_id(player.id).model_size/2
+
+		-- Check for preferred closing level WSs
+		for _, ws in pairs(ws_melee_options) do
 			if (ws.lvl == settings.target_sc_level) then
-				return ws.name
+				ws_melee = ws
 			end
 		end
-		for _, ws in pairs(ws_options) do
+		for _, ws in pairs(ws_ranged_options) do
+			if (ws.lvl == settings.target_sc_level) then
+				ws_ranged = ws
+			end
+		end
+		debug_message("Target Melee options: "..tostring(#ws_melee_options).." Melee WS: "..tostring(ws_melee))
+		debug_message("Target Ranged options: "..tostring(#ws_ranged_options).." Ranged WS: "..tostring(ws_ranged))
+		if (ws_ranged and settings.use_ranged and settings.prefer_ranged) then
+			return ws_ranged
+		elseif (ws_melee and dist <= 4) then -- Don't waste ammo if we're in melee range and ranged WSs aren't preferred
+			return ws_melee
+		elseif (ws_ranged and settings.use_ranged) then -- Melee WSs aren't an option, if ranged allowed go for it
+			return ws_ranged
+		end
+		-- No WSs can close at our target level, check other allowed closing levels
+		for _, ws in pairs(ws_melee_options) do
 			if (settings.close_levels[ws.lvl]) then
-				if (ws_to_use == nil or ws.lvl > ws_to_use.lvl) then
-					ws_to_use = ws
+				if (ws_melee == nil or ws.lvl > ws_melee.lvl) then
+					ws_melee = ws
 				end
 			end
 		end
-		if (ws_to_use ~= nil) then
-			return ws_to_use.name
+		for _, ws in pairs(ws_ranged_options) do
+			if (settings.close_levels[ws.lvl]) then
+				if (ws_ranged == nil or ws.lvl > ws_ranged.lvl) then
+					ws_ranged = ws
+				end
+			end
 		end
-		return ws_options[1].name
+		debug_message("Other Melee options: "..tostring(#ws_melee_options).." Melee WS: "..tostring(ws_melee))
+		debug_message("Other Ranged options: "..tostring(#ws_ranged_options).." Ranged WS: "..tostring(ws_ranged))
+		debug_message("Distance: "..tostring(dist).." is "..(dist>4 and "not " or "").." in melee range")
+		if (ws_ranged and settings.use_ranged and settings.prefer_ranged) then
+			return ws_ranged
+		elseif (ws_melee and dist <= 4) then -- Don't waste ammo if we're in melee range and ranged WSs aren't preferred
+			return ws_melee
+		elseif (ws_ranged and settings.use_ranged) then -- Melee WSs aren't an option, if ranged allowed go for it
+			return ws_ranged
+		end
 	end
 	return nil
 end -- get_weaponskill()
@@ -455,9 +503,9 @@ windower.register_event('prerender', function(...)
 		end
 		last_attempt = time
 		local ws = get_weaponskill()
-		if (ws and ws ~= "") then
-			debug_message("Closer found: "..ws)
-			use_weaponskill(ws)
+		if (ws) then
+			debug_message("Closer found: "..ws.name)
+			use_weaponskill(ws.name)
 			return
 		else -- There isn't a valid WS to close this chain, we can stop checking by closing wht window
 			debug_message("No closer found")
@@ -546,7 +594,7 @@ function action_handler(act)
         local delay = ability and ability.delay or 3
         local step = (reson and reson.step or 0)
 
-		sc_effect_duration = (11-step*3) > 3 and (11-step*3) or 3
+		sc_effect_duration = (12-step*3) > 3 and (12-step*3) or 3
 		debug_message("Skillchain effect applied: "..skillchain.." L"..level.." Step: "..step)
 		if (level >= 4 or (level == 3 and skillchain == last_skillchain.english)) then -- Level 4 and double light/darkness can't be continued
 			skillchain_closed()
@@ -557,7 +605,7 @@ function action_handler(act)
 			skillchain_opened(skillchains:with('english', skillchain))
 		end
 	elseif ability and (message_ids:contains(message_id) or message_id == 2 and buffs[actor] and chain_buff(buffs[actor])) then
-		sc_effect_duration = 11
+		sc_effect_duration = 12
 		debug_message("Base SC effect applied to "..target.id.." Used: "..skills[resource][action_id].en.." Eff: "..T(skills[resource][action_id].skillchain):concat(", "))
 		local m = windower.ffxi.get_mob_by_target("t")
 		if (m and m.id == target.id) then
