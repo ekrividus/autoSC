@@ -752,12 +752,23 @@ windower.register_event('addon command', function(...)
 		settings:save('all')
 		return
 	elseif (cmd == 'close' or cmd == 'c') then
-		local n = tonumber(arg[s])
+		local n = tonumber(arg[2])
 		if (n == nil or n < 1 or n > 4) then
 			message("Usage: autoSC (c)lose # Where # is the SC level to close 1..4")
 			return
 		end
 		settings.close_levels[n] = not settings.close_levels[n]
+		settings:save('all')
+		message("Will "..(settings.close_levels[n] and "now " or "not ").."close skillchains of level "..n)
+		return
+	elseif (cmd == 'ranged' or cmd == 'r') then
+		settings.use_ranged = not settings.use_ranged
+		message("Ranged WS "..(settings.use_ranged and "On" or "Off"))
+		settings:save('all')
+		return
+	elseif (cmd == 'preferranged' or cmd == 'pr') then
+		settings.prefer_ranged = not settings.prefer_ranged
+		message("Prefer Ranged WS "..(settings.prefer_ranged and "On" or "Off"))
 		settings:save('all')
 		return
 	elseif (cmd == 'reload') then
