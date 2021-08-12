@@ -149,7 +149,7 @@ local ws_window = 0
 local last_attempt = 0
 
 local defaults = T{}
-defaults.update_frequency = 0.1
+defaults.update_frequency = 0.5
 defaults.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
 defaults.min_ws_window = 2.75
 defaults.max_ws_window = 8
@@ -193,7 +193,7 @@ function message(text, to_log)
 	if (to_log) then
 		log(text)
 	else
-		windower.add_to_chat(17, _addon.name..": "..text)
+		windower.add_to_chat(207, _addon.name..": "..text)
 	end
 end
 
@@ -205,7 +205,7 @@ function debug_message(text, to_log)
 	if (to_log) then
 		log("(debug): "..text)
 	else
-		windower.add_to_chat(17, _addon.name.." (debug): "..text)
+		windower.add_to_chat(207, _addon.name.." (debug): "..text)
 	end
 end
 
@@ -392,14 +392,14 @@ function get_weaponskill()
 		end
 		-- No WSs can close at our target level, check other allowed closing levels
 		for _, ws in pairs(ws_melee_options) do
-			if (settings.close_levels[ws.lvl]) then
+			if (settings.close_levels[ws.lvl] == true) then
 				if (ws_melee == nil or ws.lvl > ws_melee.lvl) then
 					ws_melee = ws
 				end
 			end
 		end
 		for _, ws in pairs(ws_ranged_options) do
-			if (settings.close_levels[ws.lvl]) then
+			if (settings.close_levels[ws.lvl] == true) then
 				if (ws_ranged == nil or ws.lvl > ws_ranged.lvl) then
 					ws_ranged = ws
 				end
@@ -408,11 +408,12 @@ function get_weaponskill()
 		debug_message("Other Melee options: "..tostring(#ws_melee_options).." Melee WS: "..tostring(ws_melee))
 		debug_message("Other Ranged options: "..tostring(#ws_ranged_options).." Ranged WS: "..tostring(ws_ranged))
 		debug_message("Distance: "..tostring(dist).." is "..(dist>4 and "not " or "").." in melee range")
-		if (ws_ranged and settings.use_ranged and settings.prefer_ranged) then
+		debug_message("WS: "..tostring(ws_melee)..": "..tostring(ws_melee and ws_melee.lvl or ""))
+		if (ws_ranged and settings.close_levels[ws_ranged.lvl] and settings.use_ranged and settings.prefer_ranged) then
 			return ws_ranged
-		elseif (ws_melee and dist <= 4) then -- Don't waste ammo if we're in melee range and ranged WSs aren't preferred
+		elseif (ws_melee and settings.close_levels[ws_melee.lvl] and dist <= 4) then -- Don't waste ammo if we're in melee range and ranged WSs aren't preferred
 			return ws_melee
-		elseif (ws_ranged and settings.use_ranged) then -- Melee WSs aren't an option, if ranged allowed go for it
+		elseif (ws_ranged and settings.close_levels[ws_ranged.lvl] and settings.use_ranged) then -- Melee WSs aren't an option, if ranged allowed go for it
 			return ws_ranged
 		end
 	end
@@ -490,12 +491,13 @@ windower.register_event('prerender', function(...)
 		return
 	end
 
+	local mob = windower.ffxi.get_mob_by_target("t")
 	if (sc_opened and weaponskill_ready() and ws_window > settings.min_ws_window and ws_window < settings.max_ws_window) then
 		if (ws_window > sc_effect_duration) then
 			debug_message("WS window expired, sc effect wore.")
 			skillchain_closed()
 			return
-		elseif (windower.ffxi.get_mob_by_target("t") == nil) then
+		elseif (mob == nil or mob.hpp <= 0) then
 			skillchain_closed()
 			return
 		elseif (last_attempt + settings.attempt_delay > time) then 
@@ -518,8 +520,8 @@ windower.register_event('prerender', function(...)
 		if (last_attempt + settings.attempt_delay > time) then 
 			return
 		end
-		open_skillchain()
 		last_attempt = time
+		open_skillchain()
 		return
 	end
 end)
@@ -596,7 +598,7 @@ function action_handler(act)
 
 		sc_effect_duration = (12-step*3) > 3 and (12-step*3) or 3
 		debug_message("Skillchain effect applied: "..skillchain.." L"..level.." Step: "..step)
-		if (level >= 4 or (level == 3 and skillchain == last_skillchain.english)) then -- Level 4 and double light/darkness can't be continued
+		if (level >= 4 or (level == 3 and last_skillchain and skillchain == last_skillchain.english)) then -- Level 4 and double light/darkness can't be continued
 			skillchain_closed()
 			return
 		end
