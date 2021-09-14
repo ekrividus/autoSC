@@ -366,9 +366,9 @@ function get_weaponskill()
 	elseif (#ws_melee_options == 0 and (#ws_ranged_options == 1 and settings.use_ranged)) then
 		return ws_ranged_options[1]
 	else 
-		local ws_melee,ws_ranged = nil
+		local ws_melee, ws_ranged = nil, nil
 		local mob = windower.ffxi.get_mob_by_target("t")
-		local dist = mob.distance:sqrt() - mob.model_size/2 -- - windower.ffxi.get_mob_by_id(player.id).model_size/2
+		local dist = mob.distance:sqrt() - mob.model_size/2
 
 		-- Check for preferred closing level WSs
 		for _, ws in pairs(ws_melee_options) do
