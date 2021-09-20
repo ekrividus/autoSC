@@ -22,6 +22,8 @@ With no options will toggle running
 * honor/wait - Will *honor* the currently open SC effect *wait*ing for it to wear before opening a new SC.
 * ws <ws name> - Will set the WS to use for opening a SC and the _open_ option is toggled on.
   * WSs are saved per job and per weapon, so you can use RMEA or quested WSs with appropriate weapons for openers if desired.
+* Ranged - Toggle allowing the use of ranged WSes
+* PreferRanged - Toggles prioritizing ranged WSes over melee
 
 #### ToDo:
 * (Dis)Allow closing given levels
@@ -30,10 +32,12 @@ With no options will toggle running
   * Can now close T4 and recognizes T4 but doesn't always honor double T3 ...
   * Double T3 are being recognized as closed, mostly
 * Break off Ranged WSs so they can be enabled/disabled seperately
+ * Done
 * Add melee/ranged WS preferences, based on user choice > actual combat range
+ * Done
 * Maybe add autoRA and gearswap interaction
 * Add Job Ability SC effects, Konzen-Ittai for instance
 * Add magic and ability SC closers, Blu spells, pets, etc.
 * Add ability to open SCs if no SC effect is already present and TP > 1000 
   * Done, appears to be working as intended
-  * Add option to wait for existing SC effect to end, even if unable to close it
+  * Added option to wait for existing SC effect to end, even if unable to close it this way you don't open a new SC when someone else could have closed
