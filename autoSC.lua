@@ -30,11 +30,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 autoSC will attempt to close an open skillchain
 will use the highest tier closing it can, does not care about a specific WS
 ]]
-_addon.version = '0.1.0'
+_addon.version = '1.1.3'
 _addon.name = 'autoSC'
 _addon.author = 'Ekrividus'
 _addon.commands = {'autoskillchain', 'autoSC', 'asc'}
-_addon.lastUpdate = '12/21/2020'
+_addon.lastUpdate = '4/2/2022'
 _addon.windower = '4'
 
 require 'tables'
@@ -445,7 +445,7 @@ function get_weapon_name()
 	if weapon_name:endswith("+1") or weapon_name:endswith("+2") or weapon_name:endswith("+3") then
 		weapon_name = weapon_name:slice(1, -4)
 	end
-	return gsub(gsub(weapon_name, " ", "_"), "%'", ""):lower()
+	return weapon_name:lower():split("'"):concat("_"):split(" "):concat("_")
 end
 
 function open_skillchain()
