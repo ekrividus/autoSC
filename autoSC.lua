@@ -445,7 +445,7 @@ function get_weapon_name()
 	if weapon_name:endswith("+1") or weapon_name:endswith("+2") or weapon_name:endswith("+3") then
 		weapon_name = weapon_name:slice(1, -4)
 	end
-	return weapon_name:lower():split("'"):concat("_"):split(" "):concat("_")
+	return weapon_name:lower():split("'"):concat(""):split(" "):concat("_")
 end
 
 function open_skillchain()
