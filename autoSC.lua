@@ -160,8 +160,8 @@ defaults.attempt_delay = 0.5
 -- Newly added settings, may be missing from settings files
 defaults.open_sc = false
 defaults.wait_to_open = true
-defaults.sc_openers = {}
-defaults.ws_filters = {}
+defaults.sc_openers = T{}
+defaults.ws_filters = T{}
 
 defaults.use_ranged = false
 defaults.prefer_ranged = false
@@ -170,7 +170,8 @@ local settings = T{}
 settings = config.load("data/"..player.name..".xml", defaults)
 settings.open_sc = settings.open_sc or false
 settings.wait_to_open = settings.wait_to_open or true
-settings.sc_openers = settings.sc_openers or {}
+settings.sc_openers = settings.sc_openers or T{}
+settings.ws_filters = settings.ws_filters or T{}
 settings.use_ranged = settings.use_ranged or false
 settings.prefer_ranged = settings.prefer_ranged or false
 
@@ -225,7 +226,8 @@ function show_status(which)
 	message('Auto Skillchains: \t\t'..(active and 'On' or 'Off'))
 	if (which == 'display') then
 		message('Display Settings: No display options yet.')
-	elseif (which == 'openers') then
+	-- elseif (which == 'openers') then
+	elseif (which == 'filters') then
 	else
 		for k, v in pairs(settings) do
 			if (k == 'sc_openers') then
@@ -233,6 +235,13 @@ function show_status(which)
 				local job = player.main_job:lower()
 				local opener = tostring(settings.sc_openers[job] and (settings.sc_openers[job][weapon] or 'None for '..job) or 'None for '..weapon:split("_"):concat(" "))
 				message('Opener for '..player.main_job..' using '..title_case(weapon:split("_"):concat(" "))..': '..opener)
+			elseif (k == 'ws_filters') then
+				local weapon = get_weapon_name():lower()
+				if (settings.ws_filters and settings.ws_filters[weapon]) then
+					message('Filters for '..weapon..': '..settings.ws_filters[weapon]:concat(', '))
+				else
+					message('Filters for '..weapon..': None')
+				end
 			elseif (k == 'display') then
 				-- There's no display made (yet?)
 			elseif (type(v) == 'table') then
