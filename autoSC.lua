@@ -202,7 +202,11 @@ function init_display()
 
 	display:appendline('Open new SC? ${open_sc|No} \n   Using: ${opener|None}')
 	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
-	display.opener = settings.sc_openers[player.main_job:lower()][get_weapon_name()]
+	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and settings.sc_openers[player.main_job:lower()][get_weapon_name()]) then 
+		display.opener = settings.sc_openers and settings.sc_openers[player.main_job:lower()][get_weapon_name()]
+	else
+		display.opener = "None"
+	end
 
 	display:appendline('Wait for SC effect? ${wait_to_open|No}')
 	display.wait_to_open = settings.wait_to_open and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
@@ -236,7 +240,11 @@ function update_display()
 	display.weapon = title_case(get_weapon_name())
 
 	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
-	display.opener = settings.sc_openers[player.main_job:lower()][get_weapon_name()]
+	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and settings.sc_openers[player.main_job:lower()][get_weapon_name()]) then 
+		display.opener = settings.sc_openers and settings.sc_openers[player.main_job:lower()][get_weapon_name()]
+	else
+		display.opener = "None"
+	end
 
 	display.wait_to_open = settings.wait_to_open and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
 
