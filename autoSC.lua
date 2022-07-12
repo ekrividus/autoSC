@@ -51,6 +51,8 @@ packets = require('packets')
 
 skills = require('skills')
 
+texts = require('texts')
+
 local bags = {[0]='inventory',[8]='wardrobe',[10]='wardrobe2',[11]='wardrobe3',[12]='wardrobe4'}
 local message_ids = T{110,185,187,317,802}
 local skillchain_ids = T{288,289,290,291,292,293,294,295,296,297,298,299,300,301,385,386,387,388,389,390,391,392,393,394,395,396,397,767,768,769,770}
@@ -150,7 +152,6 @@ local last_attempt = 0
 
 local defaults = T{}
 defaults.update_frequency = 0.5
-defaults.display = {text={size=12,font='Consolas'},pos={x=0,y=0},bg={visible=true}}
 defaults.min_ws_window = 2.75
 defaults.max_ws_window = 8
 defaults.min_tp = 1000
@@ -166,6 +167,22 @@ defaults.ws_filters = T{}
 defaults.use_ranged = false
 defaults.prefer_ranged = false
 
+defaults.display = {
+	text = {
+		size=10,
+		font='Consolas'
+	},
+	pos = {x=100,y=240},
+	bg = {
+		visible=true,
+		alpha=64,
+	},
+	font = "Consolas",
+	font_size = 10,
+	padding = 2,
+}
+
+
 local settings = T{}
 settings = config.load("data/"..player.name..".xml", defaults)
 settings.open_sc = settings.open_sc or false
@@ -174,6 +191,71 @@ settings.sc_openers = settings.sc_openers or T{}
 settings.ws_filters = settings.ws_filters or T{}
 settings.use_ranged = settings.use_ranged or false
 settings.prefer_ranged = settings.prefer_ranged or false
+
+--[[ UI Display Setup ]]
+local display = texts.new('${addon_title}', settings.display, settings)
+function init_display() 
+	display.addon_title = active and ("--- Auto Skillchains "):text_color(0,255,0) or ("--- Auto Skillchains "):text_color(255,0,0)
+
+	display:appendline('Weapon: ${weapon|None}')
+	display.weapon = title_case(get_weapon_name())
+
+	display:appendline('Open new SC? ${open_sc|No} \n   Using: ${opener|None}')
+	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+	display.opener = settings.sc_openers[player.main_job:lower()][get_weapon_name()]
+
+	display:appendline('Wait for SC effect? ${wait_to_open|No}')
+	display.wait_to_open = settings.wait_to_open and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+
+	display:appendline('Use ranged? ${use_ranged|No} \n   Prefer ranged? ${prefer_ranged|No}')
+	display.use_ranged = settings.use_ranged and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+	display.prefer_ranged = settings.prefer_ranged and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+
+	display:appendline('Close SC Level:\n    1: ${C1|No } 2: ${C2|No } 3: ${C3|No } 4: ${C4|No }')
+	display.C1 = settings.close_levels[1] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+	display.C2 = settings.close_levels[2] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+	display.C3 = settings.close_levels[3] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+	display.C4 = settings.close_levels[4] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+
+	display:appendline('Target SC Level: ${target_sc_level|None}')
+	display.target_sc_level = tostring(settings.target_sc_level)
+	
+	display:appendline('WS Window:\n   Begin: ${min_win|?}  End: ${max_win|?}')
+	display.min_win = tostring(settings.min_ws_window):text_color(0,255,0)
+	display.max_win = tostring(settings.max_ws_window):text_color(255,0,0)
+
+	display:appendline('Filtered WSs:\n   ${ws_filters|None}')
+	display.ws_filters = settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
+
+	display:show()
+end
+
+function update_display() 
+	display.addon_title = active and ("--- Auto Skillchains "):text_color(0,255,0) or ("--- Auto Skillchains "):text_color(255,0,0)
+
+	display.weapon = title_case(get_weapon_name())
+
+	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+	display.opener = settings.sc_openers[player.main_job:lower()][get_weapon_name()]
+
+	display.wait_to_open = settings.wait_to_open and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+
+	display.use_ranged = settings.use_ranged and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+	display.prefer_ranged = settings.prefer_ranged and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
+
+	display.C1 = settings.close_levels[1] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+	display.C2 = settings.close_levels[2] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+	display.C3 = settings.close_levels[3] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+	display.C4 = settings.close_levels[4] and tostring("Yes"):text_color(0,255,64) or tostring("No "):text_color(255,0,0)
+
+	display.target_sc_level = tostring(settings.target_sc_level)
+	
+	display.min_win = tostring(settings.min_ws_window):text_color(0,255,0)
+	display.max_win = tostring(settings.max_ws_window):text_color(255,0,0)
+
+	display.ws_filters = settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
+end
+--[[ End UI Display Setup ]]
 
 local function tchelper(first, rest)
     return first:upper()..rest:lower()
@@ -654,6 +736,10 @@ windower.register_event('logout', 'zone change', 'job change', function(...)
 	return
 end)
 
+windower.register_event('load', 'reload', function(...)
+	init_display()
+end)
+
 -- Process incoming commands
 windower.register_event('addon command', function(...)
 	local cmd = 'help'
@@ -667,7 +753,7 @@ windower.register_event('addon command', function(...)
 	elseif (cmd == 'help') then
 		show_help()
 		return
-	elseif (cmd == 'status' or cmd == 'show') then
+	elseif (cmd == 'status') then
 		show_status()
 		return
 	elseif (cmd == 'on') then
@@ -675,11 +761,14 @@ windower.register_event('addon command', function(...)
 		player = windower.ffxi.get_player()
 		active = true
 		last_check_time = os.clock()
-        return
     elseif (cmd == 'off') then
 		message("Stopping")
         active = false
+	elseif (cmd == 'hide') then
+		display:hide()
 		return
+	elseif (cmd == 'show') then
+		display:show()
 	elseif (cmd == 'open') then
 		settings.open_sc = not settings.open_sc
 		message("Will "..(settings.open_sc and "" or "not ").."open new SCs")
@@ -746,7 +835,6 @@ windower.register_event('addon command', function(...)
 			return
 		end
 		settings:save('all')
-		return
 	elseif (cmd == 'minwin') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
@@ -755,7 +843,6 @@ windower.register_event('addon command', function(...)
 		end
 		settings.min_ws_window = n
 		settings:save('all')
-		return
 	elseif (cmd == 'maxwin') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
@@ -764,7 +851,6 @@ windower.register_event('addon command', function(...)
 		end
 		settings.max_ws_window = n
 		settings:save('all')
-		return
 	elseif (cmd == 'retry') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
@@ -773,7 +859,6 @@ windower.register_event('addon command', function(...)
 		end
 		settings.attempt_delay = n
 		settings:save('all')
-		return
 	elseif (cmd == 'frequency' or cmd == 'f') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
@@ -782,7 +867,6 @@ windower.register_event('addon command', function(...)
 		end
 		settings.update_frequency = n
 		settings:save('all')
-		return
 	elseif (cmd == 'level' or cmd == 'l') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 0) then
@@ -791,7 +875,6 @@ windower.register_event('addon command', function(...)
 		end
 		settings.target_sc_level = n
 		settings:save('all')
-		return
 	elseif (cmd == 'close' or cmd == 'c') then
 		local n = tonumber(arg[2])
 		if (n == nil or n < 1 or n > 4) then
@@ -801,17 +884,14 @@ windower.register_event('addon command', function(...)
 		settings.close_levels[n] = not settings.close_levels[n]
 		settings:save('all')
 		message("Will "..(settings.close_levels[n] and "now " or "not ").."close skillchains of level "..n)
-		return
 	elseif (cmd == 'ranged' or cmd == 'r') then
 		settings.use_ranged = not settings.use_ranged
 		message("Ranged WS "..(settings.use_ranged and "On" or "Off"))
 		settings:save('all')
-		return
 	elseif (cmd == 'preferranged' or cmd == 'pr') then
 		settings.prefer_ranged = not settings.prefer_ranged
 		message("Prefer Ranged WS "..(settings.prefer_ranged and "On" or "Off"))
 		settings:save('all')
-		return
 	elseif (cmd == 'reload') then
 		player = windower.ffxi.get_player()
 		settings = config.load("data/"..player.name..".xml", defaults)
@@ -820,4 +900,5 @@ windower.register_event('addon command', function(...)
 		message("Will"..(debug and ' ' or ' not ').."show debug information")
 		return
     end
+	update_display()
 end) -- Addon Command

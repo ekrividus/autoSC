@@ -10,6 +10,8 @@ With no options will toggle running
 * on/off - To start/stop it 
 * debug - To fill your chatlog with messages you may want to see
 * help - A less throurough version of this readme
+* show - Will display the status widget
+* hide - Will hide the status widget
 * status - Show current settings and such
 * tp <number> - Minimum TP to attempt to close a SC
 * minwin <number> - The earliest to start trying to close a SC that has been detected
