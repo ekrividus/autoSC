@@ -161,6 +161,8 @@ defaults.attempt_delay = 0.5
 defaults.open_sc = false
 defaults.wait_to_open = true
 defaults.sc_openers = {}
+defaults.ws_filters = {}
+
 defaults.use_ranged = false
 defaults.prefer_ranged = false
 
@@ -320,12 +322,15 @@ function get_weaponskill()
 		for _, v in pairs (last_skillchain.chains) do
 			for _, id in pairs (weapon_skills) do
 				if (id and skills.weapon_skills[id]) then
-					for sc_closer, sc_result in pairs (sc_info[v].closers) do
-						if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
-							if (ranged_weaponskills:contains(skills.weapon_skills[id].en)) then
-								ws_ranged_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
-							else
-								ws_melee_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+					if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id])) then
+					else 
+						for sc_closer, sc_result in pairs (sc_info[v].closers) do
+							if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
+								if (ranged_weaponskills:contains(skills.weapon_skills[id].en)) then
+									ws_ranged_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+								else
+									ws_melee_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+								end
 							end
 						end
 					end
@@ -335,12 +340,15 @@ function get_weaponskill()
 	else
 		for _, id in pairs (weapon_skills) do
 			if (id and id > 0 and skills.weapon_skills[id]) then
-				for sc_closer, sc_result in pairs (sc_info[last_skillchain.english].closers) do
-					if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
-						if (ranged_weaponskills:contains(skills.weapon_skills[id].en)) then
-							ws_ranged_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
-						else
-							ws_melee_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+				if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id])) then
+				else 
+					for sc_closer, sc_result in pairs (sc_info[last_skillchain.english].closers) do
+						if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
+							if (ranged_weaponskills:contains(skills.weapon_skills[id].en)) then
+								ws_ranged_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+							else
+								ws_melee_options:append({name=skills.weapon_skills[id].en,lvl=sc_result[1]})
+							end
 						end
 					end
 				end
@@ -686,13 +694,35 @@ windower.register_event('addon command', function(...)
 			ws_name = "Chant du Cygne"
 		end
 		if (res.weapon_skills:with('name', ws_name) == nil) then
-			message("No weaponskill with name: "..ws_name.." found. SC Opener not added.")
+			message("No weaponskill with name: "..ws_name.." found. SC opener not added.")
 			return
 		end
 
 		local weapon_name = get_weapon_name()
 		settings.sc_openers[job][weapon_name] = ws_name
 		message("SC Opener for "..tostring(job:upper()).." using "..title_case(weapon_name):split("_"):concat(" ").." set to "..tostring(settings.sc_openers[job][weapon_name]))
+		settings:save('all')
+	elseif (cmd == 'filter' or cmd == 'filt') then
+		if (#arg < 2) then
+			message("Usage: autoSC filter weaponskill name")
+			return
+		end
+
+		local weapon = get_weapon_name()
+		settings.ws_filters[weapon] = settings.ws_filters[weapon] or {}
+
+		local ws_name = title_case(T(arg):slice(2, #arg):concat(" "))
+		
+		if (ws_name == "Chant Du Cygne") then
+			ws_name = "Chant du Cygne"
+		end
+		if (res.weapon_skills:with('name', ws_name) == nil) then
+			message("No weaponskill with name: "..ws_name.." found. WS filter not added.")
+			return
+		end
+
+		T(settings.ws_filters[weapon]):append(ws_name)
+		message("WS "..ws_name.." will be filtered out when using "..title_case(weapon):split("_"):concat(" ")..".")
 		settings:save('all')
 	elseif (cmd == 'tp') then
 		if (#arg < 2) then
