@@ -21,7 +21,10 @@ With no options will toggle running
 * open - Toggle whether or not the set WS should be used to open fresh SCs when no SC effect is already present.
 * honor/wait - Will *honor* the currently open SC effect *wait*ing for it to wear before opening a new SC.
 * ws <ws name> - Will set the WS to use for opening a SC and the _open_ option is toggled on.
-  * WSs are saved per job and per weapon, so you can use RMEA or quested WSs with appropriate weapons for openers if desired.
+  * WS openers are saved per job and per weapon, so you can use RMEA or quested WSs with appropriate weapons for openers if desired.
+* filter <ws name> - Will disable the use of the named WS when using the currently equipped weapon
+  * WS filters are saved per weapon so if you set a filter for Burning Blade while on War with Naegling equipped it will also be filtered on every other job you use Naegling on.
+  * WS filters cannot be removed via command, yet (coming soon?). You will need to manually remove them from the settings for your character and reload autoSC for now.
 * Ranged - Toggle allowing the use of ranged WSes
 * PreferRanged - Toggles prioritizing ranged WSes over melee
 
