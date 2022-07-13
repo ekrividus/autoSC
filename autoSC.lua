@@ -421,7 +421,7 @@ function get_weaponskill()
 			for _, id in pairs (weapon_skills) do
 				if (id and skills.weapon_skills[id]) then
 					if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id].en)) then
-						message(skills.weapon_skills[id].en.." is filtered out, skipping it.")
+						debug_message(skills.weapon_skills[id].en.." is filtered out, skipping it.", true)
 					else 
 						for sc_closer, sc_result in pairs (sc_info[v].closers) do
 							if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
@@ -440,7 +440,7 @@ function get_weaponskill()
 		for _, id in pairs (weapon_skills) do
 			if (id and id > 0 and skills.weapon_skills[id]) then
 				if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id].en)) then
-					message(skills.weapon_skills[id].en.." is filtered out, skipping it.")
+					debug_message(skills.weapon_skills[id].en.." is filtered out, skipping it.", true)
 				else 
 					for sc_closer, sc_result in pairs (sc_info[last_skillchain.english].closers) do
 						if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
