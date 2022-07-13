@@ -168,11 +168,6 @@ defaults.use_ranged = false
 defaults.prefer_ranged = false
 
 defaults.display = {
-	text = {
-		size=10,
-		font='Consolas'
-	},
-	pos = {x=100,y=240},
 	bg = {
 		visible=true,
 		alpha=64,
@@ -180,17 +175,21 @@ defaults.display = {
 	font = "Consolas",
 	font_size = 10,
 	padding = 2,
+	pos = {x=100,y=240},
+	stroke = {
+		width = 1,
+	},
+	text = {
+		size=10,
+		font='Consolas'
+	},
 }
 
 
 local settings = T{}
 settings = config.load("data/"..player.name..".xml", defaults)
-settings.open_sc = settings.open_sc or false
-settings.wait_to_open = settings.wait_to_open or true
 settings.sc_openers = settings.sc_openers or T{}
 settings.ws_filters = settings.ws_filters or T{}
-settings.use_ranged = settings.use_ranged or false
-settings.prefer_ranged = settings.prefer_ranged or false
 
 --[[ UI Display Setup ]]
 local display = texts.new('${addon_title}', settings.display, settings)
@@ -421,7 +420,8 @@ function get_weaponskill()
 		for _, v in pairs (last_skillchain.chains) do
 			for _, id in pairs (weapon_skills) do
 				if (id and skills.weapon_skills[id]) then
-					if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id])) then
+					if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id].en)) then
+						message(skills.weapon_skills[id].en.." is filtered out, skipping it.")
 					else 
 						for sc_closer, sc_result in pairs (sc_info[v].closers) do
 							if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
@@ -439,7 +439,8 @@ function get_weaponskill()
 	else
 		for _, id in pairs (weapon_skills) do
 			if (id and id > 0 and skills.weapon_skills[id]) then
-				if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id])) then
+				if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:contains(skills.weapon_skills[id].en)) then
+					message(skills.weapon_skills[id].en.." is filtered out, skipping it.")
 				else 
 					for sc_closer, sc_result in pairs (sc_info[last_skillchain.english].closers) do
 						if (T(skills.weapon_skills[id].skillchain):contains(sc_closer)) then
@@ -703,7 +704,7 @@ function action_handler(act)
         local delay = ability and ability.delay or 3
         local step = (reson and reson.step or 0)
 
-		sc_effect_duration = (12-step*3) > 3 and (12-step*3) or 3
+		sc_effect_duration = (13-step*3) > 3 and (13-step*3) or 4
 		debug_message("Skillchain effect applied: "..skillchain.." L"..level.." Step: "..step)
 		if (level >= 4 or (level == 3 and last_skillchain and skillchain == last_skillchain.english)) then -- Level 4 and double light/darkness can't be continued
 			skillchain_closed()
@@ -810,7 +811,7 @@ windower.register_event('addon command', function(...)
 		settings:save('all')
 	elseif (cmd == 'filter' or cmd == 'filt') then
 		if (#arg < 2) then
-			message("Usage: autoSC filter weaponskill name")
+			message("Usage: autoSC filter <weaponskill>\nAdds/Removes named weaponskill from filter list.")
 			return
 		end
 
@@ -823,13 +824,20 @@ windower.register_event('addon command', function(...)
 			ws_name = "Chant du Cygne"
 		end
 		if (res.weapon_skills:with('name', ws_name) == nil) then
-			message("No weaponskill with name: "..ws_name.." found. WS filter not added.")
+			message("No weaponskill with name: "..ws_name.." found. WS filter not added/removed.")
 			return
 		end
 
-		T(settings.ws_filters[weapon]):append(ws_name)
-		message("WS "..ws_name.." will be filtered out when using "..title_case(weapon):split("_"):concat(" ")..".")
+		if (settings.ws_filters[weapon]:contains(ws_name)) then
+			message("WS "..ws_name.." removed from filtered WSs for "..title_case(weapon):split("_"):concat(" ")..".")
+			settings.ws_filters[weapon]:delete(ws_name)
+		else
+			message("WS "..ws_name.." added to filtered WSs for "..title_case(weapon):split("_"):concat(" ")..".")
+			T(settings.ws_filters[weapon]):append(ws_name) 
+		end
+
 		settings:save('all')
+		update_display()
 	elseif (cmd == 'tp') then
 		if (#arg < 2) then
 			message("Usage: autoSC TP #### where #### is a number between 1000~3000")
