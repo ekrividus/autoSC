@@ -828,7 +828,7 @@ windower.register_event('addon command', function(...)
 			return
 		end
 
-		if (settings.ws_filters[weapon]:contains(ws_name)) then
+		if (settings.ws_filters and settings.ws_filters[weapon] and T(settings.ws_filters[weapon]):contains(ws_name)) then
 			message("WS "..ws_name.." removed from filtered WSs for "..title_case(weapon):split("_"):concat(" ")..".")
 			settings.ws_filters[weapon]:delete(ws_name)
 		else
