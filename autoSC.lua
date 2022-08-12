@@ -228,7 +228,7 @@ function init_display()
 	display.max_win = tostring(settings.max_ws_window):text_color(255,0,0)
 
 	display:appendline('Filtered WSs:\n   ${ws_filters|None}')
-	display.ws_filters = settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
+	display.ws_filters = (settings.ws_filters[get_weapon_name()] ~= nil) and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
 
 	display:show()
 end
@@ -531,7 +531,12 @@ end -- get_weaponskill()
 function use_weaponskill(ws_name) 
 	if (active) then
 		--if (windower.ffxi.get_mob_by_target('t').vitals.hpp < settings.max_hp) then return end
-		windower.send_command('input /ws "'..ws_name..'" <t>')
+		debug_message("Self WS? ".." targets = "..T(res.weapon_skills:with('name', ws_name).targets)[1])
+		if (res.weapon_skills:with('name', ws_name).targets and T(res.weapon_skills:with('name', ws_name).targets)[1] == "Self") then
+			windower.send_command('input /ws "'..ws_name..'" <me>')
+		else
+			windower.send_command('input /ws "'..ws_name..'" <t>')
+		end
 	end
 end
 
@@ -568,6 +573,11 @@ function open_skillchain()
 		local ws_name = settings.sc_openers[job][weapon_name]
 		local ws_range = res.weapon_skills:with('name', ws_name).range*2
 		local dist = mob.distance:sqrt()
+
+		-- If this is a self-targeted WS distance doesn't matter
+		if (T(res.weapon_skills:with('name', ws_name).targets)[1] == 'Self') then
+			dist = 1
+		end
 
 		debug_message("Opening SC with "..title_case(ws_name).." Job: "..job:upper().." Weapon: "..title_case(weapon_name))
 		ws_range = ws_range + mob.model_size/2 + windower.ffxi.get_mob_by_id(player.id).model_size/2
