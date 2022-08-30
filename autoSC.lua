@@ -38,6 +38,8 @@ _addon.lastUpdate = '4/2/2022'
 _addon.windower = '4'
 
 require 'tables'
+require 'sets'
+require 'lists'
 require 'strings'
 require 'logger'
 require 'luau'
@@ -551,7 +553,7 @@ function get_weapon_name()
 	end
 
 	local weapon_name = 'Empty'
-	if weapon ~= 0 then  --0 => nothing equipped
+	if weapon > 0 then  --0 => nothing equipped
 		weapon_name = res.items[items[bags[bag]][weapon].id].en
 	end
 
@@ -826,10 +828,9 @@ windower.register_event('addon command', function(...)
 		end
 
 		local weapon = get_weapon_name()
-		settings.ws_filters[weapon] = settings.ws_filters[weapon] or {}
+		settings.ws_filters[weapon] = settings.ws_filters[weapon] or L{}
 
 		local ws_name = title_case(T(arg):slice(2, #arg):concat(" "))
-		
 		if (ws_name == "Chant Du Cygne") then
 			ws_name = "Chant du Cygne"
 		end
@@ -838,16 +839,22 @@ windower.register_event('addon command', function(...)
 			return
 		end
 
-		if (settings.ws_filters and settings.ws_filters[weapon] and T(settings.ws_filters[weapon]):contains(ws_name)) then
+		local ws_filtered,idx = false,-1
+		for i,v in pairs(settings.ws_filters[weapon]) do
+			windower.add_to_chat(207, "WS: "..ws_name.." checking filtered: ["..i.."] 	"..v)
+			if (v == ws_name) then
+				ws_filtered = true
+			end
+		end
+		if (ws_filtered) then
+			T(settings.ws_filters[weapon]):delete(ws_name)
 			message("WS "..ws_name.." removed from filtered WSs for "..title_case(weapon):split("_"):concat(" ")..".")
-			settings.ws_filters[weapon]:delete(ws_name)
 		else
-			message("WS "..ws_name.." added to filtered WSs for "..title_case(weapon):split("_"):concat(" ")..".")
 			T(settings.ws_filters[weapon]):append(ws_name) 
+			message("WS "..ws_name.." added to filtered WSs for "..title_case(weapon):split("_"):concat(" ")..".")
 		end
 
 		settings:save('all')
-		update_display()
 	elseif (cmd == 'tp') then
 		if (#arg < 2) then
 			message("Usage: autoSC TP #### where #### is a number between 1000~3000")
