@@ -553,7 +553,7 @@ function get_weapon_name()
 	end
 
 	local weapon_name = 'Empty'
-	if weapon > 0 then  --0 => nothing equipped
+	if weapon and items[bags[bag]][weapon] and items[bags[bag]][weapon].id then
 		weapon_name = res.items[items[bags[bag]][weapon].id].en
 	end
 
