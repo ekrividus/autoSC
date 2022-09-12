@@ -230,7 +230,8 @@ function init_display()
 	display.max_win = tostring(settings.max_ws_window):text_color(255,0,0)
 
 	display:appendline('Filtered WSs:\n   ${ws_filters|None}')
-	display.ws_filters = (settings.ws_filters[get_weapon_name()] ~= nil) and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
+	local weap = get_weapon_name()
+	display.ws_filters = (weap ~= 'empty' and settings.ws_filters[weap] ~= nil) and settings.ws_filters[weap]:concat("\n   ") or "None"
 
 	display:show()
 end
@@ -553,7 +554,7 @@ function get_weapon_name()
 	end
 
 	local weapon_name = 'Empty'
-	if weapon and items[bags[bag]][weapon] and items[bags[bag]][weapon].id then
+	if tonumber(weapon) > 0 and items[bags[bag]][weapon] and items[bags[bag]][weapon].id then
 		weapon_name = res.items[items[bags[bag]][weapon].id].en
 	end
 
@@ -745,7 +746,7 @@ windower.register_event('login', function(...)
 		windower.send_command('autoSC off')
 	end
 	player = nil
-	windower.send_command("wait 5; autosc reload")
+	windower.send_command("wait 5; lua r autosc")
 	return
 end)
 
@@ -757,7 +758,7 @@ windower.register_event('logout', 'zone change', 'job change', function(...)
 	return
 end)
 
-windower.register_event('load', 'reload', function(...)
+windower.register_event('load', function(...)
 	init_display()
 end)
 
