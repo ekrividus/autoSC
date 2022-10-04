@@ -132,9 +132,10 @@ local skillchains = T{
 	[301] = {id=301,english='Impaction',elements={'Thunder'}}
 }
 
+player = windower.ffxi.get_player()
+
 local active = false
 local debug = false
-local player = windower.ffxi.get_player()
 
 local finish_act = L{2,3,5}
 local start_act = L{7,8,9,12}
@@ -842,7 +843,6 @@ windower.register_event('addon command', function(...)
 
 		local ws_filtered,idx = false,-1
 		for i,v in pairs(settings.ws_filters[weapon]) do
-			windower.add_to_chat(207, "WS: "..ws_name.." checking filtered: ["..i.."] 	"..v)
 			if (v == ws_name) then
 				ws_filtered = true
 			end
