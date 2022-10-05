@@ -240,7 +240,7 @@ end
 function update_display() 
 	display.addon_title = active and ("--- Auto Skillchains "):text_color(0,255,0) or ("--- Auto Skillchains "):text_color(255,0,0)
 
-	display.weapon = title_case(get_weapon_name())
+	display.weapon = title_case(get_weapon_name():split("_"):concat(" "))
 
 	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
 	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and settings.sc_openers[player.main_job:lower()][get_weapon_name()] and type(settings.sc_openers[player.main_job:lower()][get_weapon_name()]) ~= "function") then 
