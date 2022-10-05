@@ -265,7 +265,6 @@ function update_display()
 	display.max_win = tostring(settings.max_ws_window):text_color(255,0,0)
 
 	if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and type(settings.ws_filters[get_weapon_name()]) ~= "function") then
-		windower.add_to_chat(207, T(settings.ws_filters[get_weapon_name()]):tovstring())
 		display.ws_filters = settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
 	end
 end
