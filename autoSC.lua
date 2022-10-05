@@ -200,11 +200,11 @@ function init_display()
 	display.addon_title = active and ("--- Auto Skillchains "):text_color(0,255,0) or ("--- Auto Skillchains "):text_color(255,0,0)
 
 	display:appendline('Weapon: ${weapon|None}')
-	display.weapon = title_case(get_weapon_name())
+	display.weapon = title_case(get_weapon_name():split("_"):concat(" "))
 
 	display:appendline('Open new SC? ${open_sc|No} \n   Using: ${opener|None}')
 	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
-	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and settings.sc_openers[player.main_job:lower()][get_weapon_name()]) then 
+	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and type(settings.sc_openers[player.main_job:lower()][get_weapon_name()]) ~= "function") then 
 		display.opener = settings.sc_openers and settings.sc_openers[player.main_job:lower()][get_weapon_name()]
 	else
 		display.opener = "None"
@@ -243,7 +243,7 @@ function update_display()
 	display.weapon = title_case(get_weapon_name())
 
 	display.open_sc = settings.open_sc and tostring("Yes"):text_color(0,255,64) or tostring("No"):text_color(255,0,0)
-	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and settings.sc_openers[player.main_job:lower()][get_weapon_name()]) then 
+	if (settings.sc_openers and settings.sc_openers[player.main_job:lower()] and settings.sc_openers[player.main_job:lower()][get_weapon_name()] and type(settings.sc_openers[player.main_job:lower()][get_weapon_name()]) ~= "function") then 
 		display.opener = settings.sc_openers and settings.sc_openers[player.main_job:lower()][get_weapon_name()]
 	else
 		display.opener = "None"
@@ -264,7 +264,10 @@ function update_display()
 	display.min_win = tostring(settings.min_ws_window):text_color(0,255,0)
 	display.max_win = tostring(settings.max_ws_window):text_color(255,0,0)
 
-	display.ws_filters = settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
+	if (settings.ws_filters and settings.ws_filters[get_weapon_name()] and type(settings.ws_filters[get_weapon_name()]) ~= "function") then
+		windower.add_to_chat(207, T(settings.ws_filters[get_weapon_name()]):tovstring())
+		display.ws_filters = settings.ws_filters[get_weapon_name()] and settings.ws_filters[get_weapon_name()]:concat("\n   ") or "None"
+	end
 end
 --[[ End UI Display Setup ]]
 
@@ -555,7 +558,7 @@ function get_weapon_name()
 	end
 
 	local weapon_name = 'Empty'
-	if tonumber(weapon) > 0 and items[bags[bag]][weapon] and items[bags[bag]][weapon].id then
+	if (tonumber(weapon) > 0 and items[bags[bag]] and items[bags[bag]][weapon] and items[bags[bag]][weapon].id) then
 		weapon_name = res.items[items[bags[bag]][weapon].id].en
 	end
 
