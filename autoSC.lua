@@ -623,8 +623,10 @@ windower.register_event('prerender', function(...)
 			return
 		elseif (mob == nil or mob.hpp <= 0) then
 			skillchain_closed()
+			debug_message("WS target died or is nil.")
 			return
 		elseif (last_attempt + settings.attempt_delay > time) then 
+			debug_message("WS attempt_delay still pending " .. (last_attempt + settings.attempt_delay) .. " > " .. time .. ".")
 			return
 		end
 		last_attempt = time
@@ -639,8 +641,11 @@ windower.register_event('prerender', function(...)
 		end
 	end
 
-	-- If we can't close a SC then try to open one, if there a SC effect or we opt to ignore SC effects
-	if (settings.open_sc and not (sc_opened and settings.wait_to_open)) then
+	-- If we can't close a SC then try to open one, if there's a SC effect or we opt to ignore SC effects
+	if (settings.open_sc) then
+		if (sc_opened and settings.wait_to_open) then
+			return
+		end
 		if (last_attempt + settings.attempt_delay > time) then 
 			return
 		end
